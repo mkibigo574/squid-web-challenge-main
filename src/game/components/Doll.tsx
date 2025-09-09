@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { LightState, GameState } from '../hooks/useGame';
-import { getBestModelPath } from '../utils/modelPreloader';
+import { getModelPath } from '../utils/modelPreloader';
 import { MODEL_CONFIG } from '../config/models';
 
 interface DollProps {
@@ -182,7 +182,7 @@ export const Doll = ({ lightState, gameState, modelPath }: DollProps) => {
   const [usePrimitive, setUsePrimitive] = useState(!modelPath);
   
   // Use enhanced model path selection
-  const resolvedModelPath = modelPath || getBestModelPath(
+  const resolvedModelPath = modelPath || getModelPath(
     MODEL_CONFIG.doll.supabasePath, 
     MODEL_CONFIG.doll.localPath
   );

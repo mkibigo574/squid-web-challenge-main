@@ -124,3 +124,20 @@ export const getBestModelPath = (supabaseUrl: string, localPath: string): string
   const isProduction = import.meta.env.PROD;
   return isProduction ? supabaseUrl : localPath;
 };
+
+// Get the best model path with fallback to Supabase URL in production
+export const getModelPath = (supabaseUrl: string, localPath: string): string => {
+  // Always prefer Supabase URL in production
+  const isProduction = import.meta.env.PROD;
+  if (isProduction) {
+    return supabaseUrl;
+  }
+  
+  // In development, check if we have a resolved path
+  if (resolvedPaths.has(localPath)) {
+    return resolvedPaths.get(localPath)!;
+  }
+  
+  // Default to local path in development
+  return localPath;
+};

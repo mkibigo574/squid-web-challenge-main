@@ -3,7 +3,7 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { MODEL_CONFIG } from '../config/models';
 import { SkeletonUtils } from 'three-stdlib';
-import { getBestModelPath } from '../utils/modelPreloader';
+import { getModelPath } from '../utils/modelPreloader';
 
 interface SoldierProps {
   position: [number, number, number];
@@ -32,7 +32,7 @@ const GLBSoldier = ({ path }: { path: string }) => {
 };
 
 export const Soldier = ({ position, rotation = [0, Math.PI, 0] }: SoldierProps) => {
-  const path = getBestModelPath(MODEL_CONFIG.soldier.supabasePath, MODEL_CONFIG.soldier.localPath);
+  const path = getModelPath(MODEL_CONFIG.soldier.supabasePath, MODEL_CONFIG.soldier.localPath);
   return (
     <group position={position} rotation={rotation}>
       <Suspense fallback={null}>
