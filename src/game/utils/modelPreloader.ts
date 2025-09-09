@@ -4,6 +4,7 @@ import { MODEL_CONFIG } from '../config/models';
 // Cache for loaded models to avoid re-downloading
 const loadedModels = new Set<string>();
 const failedModels = new Set<string>();
+const resolvedPaths = new Map<string, string>(); // Maps original path to resolved path
 
 // Preload all models with error handling and fallback
 export const preloadAllModels = async () => {
@@ -66,6 +67,7 @@ export const preloadModelWithFallback = async (supabaseUrl: string, localPath: s
     // First, try to preload from Supabase
     await preloadModel(supabaseUrl);
     loadedModels.add(supabaseUrl);
+    resolvedPaths.set(localPath, supabaseUrl); // Map local path to Supabase URL
     console.log(`✅ Model loaded from Supabase: ${modelName}`);
   } catch (error) {
     console.warn(`❌ Failed to load from Supabase: ${modelName}`, error);
@@ -74,6 +76,7 @@ export const preloadModelWithFallback = async (supabaseUrl: string, localPath: s
     try {
       await preloadModel(localPath);
       loadedModels.add(localPath);
+      resolvedPaths.set(localPath, localPath); // Map local path to itself
       console.log(`✅ Fallback to local: ${modelName}`);
     } catch (localError) {
       console.error(`❌ Both Supabase and local failed: ${modelName}`, localError);
@@ -101,14 +104,23 @@ export const isModelLoaded = (path: string): boolean => {
 
 // Get the best available model path (Supabase first, then local fallback)
 export const getBestModelPath = (supabaseUrl: string, localPath: string): string => {
+  // Check if we have a resolved path for this local path
+  if (resolvedPaths.has(localPath)) {
+    return resolvedPaths.get(localPath)!;
+  }
+  
+  // If Supabase is loaded, use it
   if (loadedModels.has(supabaseUrl)) {
     return supabaseUrl;
   }
   
+  // If local is loaded, use it
   if (loadedModels.has(localPath)) {
     return localPath;
   }
   
-  // Return local path as default (will fallback in component if needed)
-  return localPath;
+  // In production, prefer Supabase URL as default
+  // In development, prefer local path
+  const isProduction = import.meta.env.PROD;
+  return isProduction ? supabaseUrl : localPath;
 };

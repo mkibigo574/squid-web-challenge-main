@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "upload-models": "tsx scripts/upload-models.ts",
-    "test-urls": "tsx scripts/test-supabase-urls.ts"
+    "test-urls": "tsx scripts/test-supabase-urls.ts",
+    "test-paths": "tsx scripts/test-production-paths.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
