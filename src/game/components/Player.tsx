@@ -5,7 +5,6 @@ import * as THREE from 'three';
 import { usePlayerMovement } from '../hooks/usePlayerMovement';
 import { MODEL_CONFIG } from '../config/models';
 import { LightState, GameState } from '../hooks/useGame';
-import { getModelPath } from '../utils/modelPreloader';
 import { getSupabaseUrl } from '@/lib/supabase';
 
 interface PlayerProps {
@@ -257,23 +256,22 @@ export const Player = ({ lightState, gameState, onElimination, onPositionUpdate,
     }
   }, [gameState]);
 
-  // Determine which model to use based on state with enhanced fallback
+  // Determine which model to use based on state
   const resolvedModelPath = useMemo(() => {
     // Prefer explicit path passed in, else use config
-    const base = modelPath || MODEL_CONFIG.player.localPath;
-    const bestPath = getModelPath(MODEL_CONFIG.player.supabasePath, MODEL_CONFIG.player.localPath);
+    const base = modelPath || MODEL_CONFIG.player.path;
     
     if (gameState === 'eliminated' && MODEL_CONFIG.player.falling) {
-      // For falling animation, use Supabase path if available, otherwise local
-      const fallingSupabasePath = getSupabaseUrl(MODEL_CONFIG.player.falling);
-      return getModelPath(fallingSupabasePath, `/models/${MODEL_CONFIG.player.falling}`);
+      // For falling animation, use Supabase URL in production, local in development
+      const isProduction = import.meta.env.PROD;
+      return isProduction ? getSupabaseUrl(MODEL_CONFIG.player.falling) : `/models/${MODEL_CONFIG.player.falling}`;
     }
     if (gameState === 'playing' && isMoving && MODEL_CONFIG.player.walking) {
-      // For walking animation, use Supabase path if available, otherwise local
-      const walkingSupabasePath = getSupabaseUrl(MODEL_CONFIG.player.walking);
-      return getModelPath(walkingSupabasePath, `/models/${MODEL_CONFIG.player.walking}`);
+      // For walking animation, use Supabase URL in production, local in development
+      const isProduction = import.meta.env.PROD;
+      return isProduction ? getSupabaseUrl(MODEL_CONFIG.player.walking) : `/models/${MODEL_CONFIG.player.walking}`;
     }
-    return bestPath;
+    return base;
   }, [gameState, isMoving, modelPath]);
 
   // Reset position when game starts and keep grounded during countdown/waiting

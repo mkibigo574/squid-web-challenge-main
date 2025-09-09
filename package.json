@@ -12,7 +12,8 @@
     "upload-models": "tsx scripts/upload-models.ts",
     "test-urls": "tsx scripts/test-supabase-urls.ts",
     "test-paths": "tsx scripts/test-production-paths.ts",
-    "test-model-paths": "tsx scripts/test-model-paths.ts"
+    "test-model-paths": "tsx scripts/test-model-paths.ts",
+    "test-final-config": "tsx scripts/test-final-config.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

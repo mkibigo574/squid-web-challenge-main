@@ -1,19 +1,13 @@
 import { getSupabaseUrl } from '@/lib/supabase';
 
-// Helper function to create model config with environment-aware path selection
-const createModelConfig = (supabasePath: string, localPath: string, config: any) => {
-  const supabaseUrl = getSupabaseUrl(supabasePath);
-  const isProduction = import.meta.env.PROD;
-  
-  return {
-    ...config,
-    supabasePath: supabaseUrl,
-    localPath,
-    // In production, always use Supabase URL. In development, use local path
-    path: isProduction ? supabaseUrl : localPath,
-    fallback: 'primitive'
-  };
-};
+// Helper function to create model config with Supabase URL and local fallback
+const createModelConfig = (supabasePath: string, localPath: string, config: any) => ({
+  ...config,
+  supabasePath: getSupabaseUrl(supabasePath),
+  localPath,
+  path: localPath, // Default to local path, will be overridden by preloader
+  fallback: 'primitive'
+});
 
 export const MODEL_CONFIG = {
   player: createModelConfig(

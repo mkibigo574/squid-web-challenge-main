@@ -3,7 +3,6 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { LightState, GameState } from '../hooks/useGame';
-import { getModelPath } from '../utils/modelPreloader';
 import { MODEL_CONFIG } from '../config/models';
 
 interface DollProps {
@@ -181,11 +180,8 @@ const GLBDoll = ({ modelPath, lightState, gameState }: {
 export const Doll = ({ lightState, gameState, modelPath }: DollProps) => {
   const [usePrimitive, setUsePrimitive] = useState(!modelPath);
   
-  // Use enhanced model path selection
-  const resolvedModelPath = modelPath || getModelPath(
-    MODEL_CONFIG.doll.supabasePath, 
-    MODEL_CONFIG.doll.localPath
-  );
+  // Use the environment-aware path from config
+  const resolvedModelPath = modelPath || MODEL_CONFIG.doll.path;
   
   useEffect(() => {
     if (!resolvedModelPath) setUsePrimitive(true);
