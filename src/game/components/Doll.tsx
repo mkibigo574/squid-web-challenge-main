@@ -3,6 +3,8 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { LightState, GameState } from '../hooks/useGame';
+import { getBestModelPath } from '../utils/modelPreloader';
+import { MODEL_CONFIG } from '../config/models';
 
 interface DollProps {
   lightState: LightState;
@@ -178,15 +180,22 @@ const GLBDoll = ({ modelPath, lightState, gameState }: {
 
 export const Doll = ({ lightState, gameState, modelPath }: DollProps) => {
   const [usePrimitive, setUsePrimitive] = useState(!modelPath);
+  
+  // Use enhanced model path selection
+  const resolvedModelPath = modelPath || getBestModelPath(
+    MODEL_CONFIG.doll.supabasePath, 
+    MODEL_CONFIG.doll.localPath
+  );
+  
   useEffect(() => {
-    if (!modelPath) setUsePrimitive(true);
-  }, [modelPath]);
+    if (!resolvedModelPath) setUsePrimitive(true);
+  }, [resolvedModelPath]);
 
   return (
     <Suspense fallback={<DollLoading />}>
-      {modelPath && !usePrimitive ? (
+      {resolvedModelPath && !usePrimitive ? (
         <GLBDoll 
-          modelPath={modelPath} 
+          modelPath={resolvedModelPath} 
           lightState={lightState} 
           gameState={gameState}
         />

@@ -5,6 +5,8 @@ import * as THREE from 'three';
 import { usePlayerMovement } from '../hooks/usePlayerMovement';
 import { MODEL_CONFIG } from '../config/models';
 import { LightState, GameState } from '../hooks/useGame';
+import { getBestModelPath } from '../utils/modelPreloader';
+import { getSupabaseUrl } from '@/lib/supabase';
 
 interface PlayerProps {
   lightState: LightState;
@@ -255,17 +257,23 @@ export const Player = ({ lightState, gameState, onElimination, onPositionUpdate,
     }
   }, [gameState]);
 
-  // Determine which model to use based on state
+  // Determine which model to use based on state with enhanced fallback
   const resolvedModelPath = useMemo(() => {
     // Prefer explicit path passed in, else use config
-    const base = modelPath || MODEL_CONFIG.player.path;
+    const base = modelPath || MODEL_CONFIG.player.localPath;
+    const bestPath = getBestModelPath(MODEL_CONFIG.player.supabasePath, MODEL_CONFIG.player.localPath);
+    
     if (gameState === 'eliminated' && MODEL_CONFIG.player.falling) {
-      return MODEL_CONFIG.player.falling;
+      // For falling animation, use Supabase path if available, otherwise local
+      const fallingSupabasePath = getSupabaseUrl(MODEL_CONFIG.player.falling);
+      return getBestModelPath(fallingSupabasePath, `/models/${MODEL_CONFIG.player.falling}`);
     }
     if (gameState === 'playing' && isMoving && MODEL_CONFIG.player.walking) {
-      return MODEL_CONFIG.player.walking;
+      // For walking animation, use Supabase path if available, otherwise local
+      const walkingSupabasePath = getSupabaseUrl(MODEL_CONFIG.player.walking);
+      return getBestModelPath(walkingSupabasePath, `/models/${MODEL_CONFIG.player.walking}`);
     }
-    return base;
+    return bestPath;
   }, [gameState, isMoving, modelPath]);
 
   // Reset position when game starts and keep grounded during countdown/waiting

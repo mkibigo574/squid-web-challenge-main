@@ -30,7 +30,16 @@ export const RedLightGreenLight = () => {
 
   // Preload all models when component mounts
   useEffect(() => {
-    preloadAllModels();
+    const loadModels = async () => {
+      try {
+        await preloadAllModels();
+        console.log('All models preloaded successfully');
+      } catch (error) {
+        console.warn('Some models failed to preload:', error);
+      }
+    };
+    
+    loadModels();
   }, []);
 
   // Initialize audio (placeholder for now)
