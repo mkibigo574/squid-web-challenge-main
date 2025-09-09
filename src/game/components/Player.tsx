@@ -5,7 +5,6 @@ import * as THREE from 'three';
 import { usePlayerMovement } from '../hooks/usePlayerMovement';
 import { MODEL_CONFIG } from '../config/models';
 import { LightState, GameState } from '../hooks/useGame';
-import { getSupabaseUrl } from '@/lib/supabase';
 
 interface PlayerProps {
   lightState: LightState;
@@ -258,20 +257,9 @@ export const Player = ({ lightState, gameState, onElimination, onPositionUpdate,
 
   // Determine which model to use based on state
   const resolvedModelPath = useMemo(() => {
-    // Prefer explicit path passed in, else use config
-    const base = modelPath || MODEL_CONFIG.player.path;
-    
-    if (gameState === 'eliminated' && MODEL_CONFIG.player.falling) {
-      // For falling animation, use Supabase URL in production, local in development
-      const isProduction = import.meta.env.PROD;
-      return isProduction ? getSupabaseUrl(MODEL_CONFIG.player.falling) : `/models/${MODEL_CONFIG.player.falling}`;
-    }
-    if (gameState === 'playing' && isMoving && MODEL_CONFIG.player.walking) {
-      // For walking animation, use Supabase URL in production, local in development
-      const isProduction = import.meta.env.PROD;
-      return isProduction ? getSupabaseUrl(MODEL_CONFIG.player.walking) : `/models/${MODEL_CONFIG.player.walking}`;
-    }
-    return base;
+    // Always use the main player model which contains all animations
+    // The GLBPlayer component will handle switching between animations
+    return modelPath || MODEL_CONFIG.player.path;
   }, [gameState, isMoving, modelPath]);
 
   // Reset position when game starts and keep grounded during countdown/waiting
