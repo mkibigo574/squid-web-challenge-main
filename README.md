@@ -137,7 +137,7 @@ The game will work with local models by default. If Supabase is configured, it w
 
 ## Gameplay Videos
 
-Videos of the current gameplay can be viewed here: [Gameplay Demo](https://charlesdarwinuni-my.sharepoint.com/:v:/g/personal/s363610_students_cdu_edu_au/EQXS8XCHTOBKv1h2wU3oKEkBHVnVkYws5y0CqamRZYo2Ww?email=reem.sherif%40cdu.edu.au&e=fizOhS)
+Videos of the current gameplay can be viewed here: [Gameplay Demo](https://charlesdarwinuni-my.sharepoint.com/:v:/g/personal/s363610_students_cdu_edu_au/EXGA6nEud4FLh-tTxqXYsmEBdXwb0IrZTLiDjxd4nMQEug?email=reem.sherif%40cdu.edu.au&e=wLK9F7)
 
 
 ## Supabase Integration
