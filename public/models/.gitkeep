@@ -1,0 +1,7 @@
+# This file ensures the models directory is tracked in git
+# Place your GLB models here:
+# - player.glb (player character)
+# - doll.glb (doll character)
+# - trees.glb (environment objects)
+# - buildings.glb (environment objects)
+# - props.glb (environment objects)
