@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { FIELD_CONFIG } from '../config/field'; // Add this import
 
 export type GameState = 'waiting' | 'countdown' | 'playing' | 'won' | 'eliminated';
 export type LightState = 'green' | 'red';
@@ -10,7 +11,7 @@ export const useGame = () => {
   const [playerPosition, setPlayerPosition] = useState(0);
   const [countdown, setCountdown] = useState(3);
   
-  const FINISH_LINE = 30; // distance from start (z=-5) to finish (z=25)
+  const FINISH_LINE = FIELD_CONFIG.FIELD_LENGTH_UNITS; // Use field config
   const GAME_DURATION = 60;
 
   const startGame = useCallback(() => {

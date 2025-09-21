@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { LightState, GameState } from '../hooks/useGame';
 import { MODEL_CONFIG } from '../config/models';
 import { multiplayerManager } from '@/lib/multiplayer';
+import { FIELD_CONFIG } from '../config/field';
 
 interface DollProps {
   lightState: LightState;
@@ -48,7 +49,7 @@ const PrimitiveDoll = ({ lightState, gameState }: { lightState: LightState; game
   });
 
   return (
-    <group ref={dollRef} position={[0, 0, 25]}>
+    <group ref={dollRef} position={FIELD_CONFIG.DOLL_POSITION}>
       {/* Doll Base */}
       <mesh position={[0, 0, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.8, 0.8, 0.3, 16]} />
@@ -166,7 +167,7 @@ const GLBDoll = ({ modelPath, lightState, gameState }: {
   });
 
   return (
-    <group ref={dollRef} position={[0, 0, 25]}>
+    <group ref={dollRef} position={FIELD_CONFIG.DOLL_POSITION}>
       <primitive object={scene} />
     </group>
   );

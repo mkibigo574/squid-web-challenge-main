@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { MODEL_CONFIG } from '../config/models';
+import { FIELD_CONFIG } from '../config/field';
 
 // Tree component using the 3D model
 const TreeModel = ({ position, rotation = [0, 0, 0], scale = [1, 1, 1] }: { 
@@ -45,50 +46,47 @@ export const Environment = () => {
       />
 
       {/* Ground at y=0 */}
-      <mesh receiveShadow position={[0, 0, 10]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[40, 40]} />
+      <mesh receiveShadow position={FIELD_CONFIG.GROUND_PLANE_POSITION} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={FIELD_CONFIG.GROUND_PLANE_SIZE} />
         <meshLambertMaterial color="#8b5a2b" />
       </mesh>
 
-      {/* Start line at z = -5 */}
-      <mesh position={[0, 0.01, -5]}>
-        <boxGeometry args={[20, 0.1, 0.5]} />
+      {/* Start line */}
+      <mesh position={FIELD_CONFIG.START_LINE_POSITION}>
+        <boxGeometry args={FIELD_CONFIG.LINE_SIZE} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
 
-      {/* Finish line at z = 25 */}
-      <mesh position={[0, 0.01, 25]}>
-        <boxGeometry args={[20, 0.1, 0.5]} />
+      {/* Finish line */}
+      <mesh position={FIELD_CONFIG.FINISH_LINE_POSITION}>
+        <boxGeometry args={FIELD_CONFIG.LINE_SIZE} />
         <meshBasicMaterial color="#ff0000" />
       </mesh>
 
       {/* Side barriers */}
-      <mesh position={[-11, 1, 10]}>
-        <boxGeometry args={[1, 2, 40]} />
-        <meshLambertMaterial color="#8b4513" />
-      </mesh>
-      <mesh position={[11, 1, 10]}>
-        <boxGeometry args={[1, 2, 40]} />
-        <meshLambertMaterial color="#8b4513" />
-      </mesh>
+      {FIELD_CONFIG.SIDE_BARRIER_POSITIONS.map((position, index) => (
+        <mesh key={index} position={position}>
+          <boxGeometry args={FIELD_CONFIG.SIDE_BARRIER_SIZE} />
+          <meshLambertMaterial color="#8b4513" />
+        </mesh>
+      ))}
 
-       {/* Back wall behind the doll */}
-       <mesh position={[0, 1, 30]}>
-        <boxGeometry args={[22, 2, 1]} />
+      {/* Back wall behind the doll */}
+      <mesh position={FIELD_CONFIG.BACK_WALL_POSITION}>
+        <boxGeometry args={FIELD_CONFIG.BACK_WALL_SIZE} />
         <meshLambertMaterial color="#8b4513" />
       </mesh>
 
       {/* Tree behind the doll */}
       <TreeModel 
-        position={[-7, 0, 27]}  // Same x and y as doll, but 2 units behind
+        position={FIELD_CONFIG.TREE_POSITION}
         rotation={[0, 0, 0]}
-        scale={[20, 50, -2]}  // Width, height, depth
-      
+        scale={[20, 50, -2]}
       />
 
       {/* Background gradient */}
-      <mesh position={[0, 15, 35]}>
-        <planeGeometry args={[100, 30]} />
+      <mesh position={FIELD_CONFIG.BACKGROUND_POSITION}>
+        <planeGeometry args={FIELD_CONFIG.BACKGROUND_SIZE} />
         <meshBasicMaterial color="#87ceeb" />
       </mesh>
     </>

@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
+
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { LightState } from './useGame';
+import { FIELD_CONFIG } from '../config/field'; // Add this import
 
 export const usePlayerMovement = (
   lightState: LightState,
@@ -17,15 +19,8 @@ export const usePlayerMovement = (
   const lastMovingRef = useRef<boolean>(false);
   const { camera } = useThree();
 
-  // World and speed scaling
-  const START_Z = -5;
-  const FINISH_Z = 25;
-  const FIELD_LENGTH_UNITS = FINISH_Z - START_Z; // 30 units
-  const FIELD_LENGTH_METERS = 400; // approximate 400m track
-  const HUMAN_RUN_MPS = 6; // ~6 m/s (fast jog)
-  const UNITS_PER_SEC = HUMAN_RUN_MPS / (FIELD_LENGTH_METERS / FIELD_LENGTH_UNITS); // ≈ 0.45 units/s
-
-  const MOVE_SPEED = UNITS_PER_SEC;
+  // Use centralized field configuration
+  const MOVE_SPEED = FIELD_CONFIG.UNITS_PER_SEC;
   const FRICTION = 0.9;
 
   useEffect(() => {
@@ -118,21 +113,20 @@ export const usePlayerMovement = (
       playerGroup.rotation.y = currentY + diff * 0.2;
     }
 
-    // Constrain movement: track spans z in [-5, 25]
-    playerGroup.position.x = Math.max(-10, Math.min(10, playerGroup.position.x));
-    if (playerGroup.position.z >= FINISH_Z) {
+    // Constrain movement using field config
+    playerGroup.position.x = Math.max(FIELD_CONFIG.PLAYER_X_BOUNDS[0], Math.min(FIELD_CONFIG.PLAYER_X_BOUNDS[1], playerGroup.position.x));
+    if (playerGroup.position.z >= FIELD_CONFIG.WIN_Z_THRESHOLD) {
       // Snap to finish and position to the left of the doll
-      playerGroup.position.z = FINISH_Z;
+      playerGroup.position.z = FIELD_CONFIG.WIN_Z_THRESHOLD;
       playerGroup.position.x = -3; // Position to the left of the doll (doll is at x=0)
       playerGroup.rotation.y = Math.PI; // turn around
       velocity.set(0, 0, 0);
     } else {
-      playerGroup.position.z = Math.max(START_Z, Math.min(FINISH_Z, playerGroup.position.z));
+      playerGroup.position.z = Math.max(FIELD_CONFIG.PLAYER_Z_BOUNDS[0], Math.min(FIELD_CONFIG.PLAYER_Z_BOUNDS[1], playerGroup.position.z));
     }
 
-    // Update game position (forward progress)
-    // Progress is distance from start line at z=-5 toward finish at z=25 → [0..30]
-    onPositionUpdate(Math.max(0, playerGroup.position.z - (-5)));
+    // Update game position using field config
+    onPositionUpdate(FIELD_CONFIG.getProgressFromZ(playerGroup.position.z));
   });
 
   return { playerGroupRef };

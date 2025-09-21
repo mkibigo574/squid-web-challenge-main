@@ -12,6 +12,14 @@ import { preloadAllModels } from './utils/modelPreloader';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Celebration } from './components/Celebration';
+import { FIELD_CONFIG } from './config/field';
+
+
+
+
+
+
+
 
 export const RedLightGreenLight = () => {
   const {
@@ -28,6 +36,8 @@ export const RedLightGreenLight = () => {
   } = useGame();
 
   const audioRef = useRef<{ [key: string]: HTMLAudioElement }>({});
+  const footstepsIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [isPlayerMoving, setIsPlayerMoving] = useState(false);
 
   // Preload all models when component mounts
   useEffect(() => {
@@ -43,16 +53,107 @@ export const RedLightGreenLight = () => {
     loadModels();
   }, []);
 
-  // Initialize audio (placeholder for now)
+  // Initialize audio with your running footsteps file
   useEffect(() => {
-    // Placeholder audio elements - replace with actual files
     audioRef.current = {
-      greenLight: new Audio(), // '/audio/green_light.mp3'
-      redLight: new Audio(),   // '/audio/red_light.mp3'
-      footsteps: new Audio(),  // '/audio/footsteps.mp3'
-      buzzer: new Audio(),     // '/audio/buzzer.mp3'
+      greenLight: new Audio('/audio/green_light.wav'), // Green light sound
+      redLight: new Audio('/audio/red_light.wav'), // Red light sound
+      footsteps: new Audio('/audio/Running%20footsteps.wav'), // URL encoded for spaces
+      buzzer: new Audio('/audio/Buzzer.wav'), // Buzzer sound for elimination
+      youWin: new Audio('/audio/win_game.wav'), // Win sound
     };
+
+    // Configure footsteps audio
+    const footstepsAudio = audioRef.current.footsteps;
+    footstepsAudio.loop = true;
+    footstepsAudio.volume = 0.6; // Adjust volume as needed
+    
+    // Configure green light audio
+    const greenLightAudio = audioRef.current.greenLight;
+    greenLightAudio.volume = 0.7; // Moderate volume for green light announcement
+    
+    // Configure red light audio
+    const redLightAudio = audioRef.current.redLight;
+    redLightAudio.volume = 0.7; // Moderate volume for red light announcement
+    
+    // Configure buzzer audio
+    const buzzerAudio = audioRef.current.buzzer;
+    buzzerAudio.volume = 0.8; // Slightly louder for elimination sound
+    
+    // Configure win audio
+    const youWinAudio = audioRef.current.youWin;
+    youWinAudio.volume = 0.8; // Moderate volume for win announcement
+    
+    // Add error handling for audio loading
+    footstepsAudio.addEventListener('error', (e) => {
+      console.error('Failed to load footsteps audio:', e);
+    });
+    
+    footstepsAudio.addEventListener('canplaythrough', () => {
+      console.log('Footsteps audio loaded successfully');
+    });
+    
+    greenLightAudio.addEventListener('error', (e) => {
+      console.error('Failed to load green light audio:', e);
+    });
+    
+    greenLightAudio.addEventListener('canplaythrough', () => {
+      console.log('Green light audio loaded successfully');
+    });
+    
+    redLightAudio.addEventListener('error', (e) => {
+      console.error('Failed to load red light audio:', e);
+    });
+    
+    redLightAudio.addEventListener('canplaythrough', () => {
+      console.log('Red light audio loaded successfully');
+    });
+    
+    buzzerAudio.addEventListener('error', (e) => {
+      console.error('Failed to load buzzer audio:', e);
+    });
+    
+    buzzerAudio.addEventListener('canplaythrough', () => {
+      console.log('Buzzer audio loaded successfully');
+    });
+    
+    youWinAudio.addEventListener('error', (e) => {
+      console.error('Failed to load you win audio:', e);
+    });
+    
+    youWinAudio.addEventListener('canplaythrough', () => {
+      console.log('You win audio loaded successfully');
+    });
   }, []);
+
+  // Footsteps management
+  useEffect(() => {
+    const footstepsAudio = audioRef.current.footsteps;
+    
+    if (isPlayerMoving && gameState === 'playing' && lightState === 'green') {
+      // Start footsteps when player is moving during green light
+      if (footstepsAudio.paused) {
+        footstepsAudio.currentTime = 0; // Reset to beginning
+        footstepsAudio.play().catch(() => {
+          console.log('Footsteps audio play failed (autoplay restrictions)');
+        });
+      }
+    } else {
+      // Stop footsteps when not moving or during red light
+      if (!footstepsAudio.paused) {
+        footstepsAudio.pause();
+        footstepsAudio.currentTime = 0;
+      }
+    }
+
+    return () => {
+      // Cleanup: stop footsteps when component unmounts
+      if (footstepsAudio && !footstepsAudio.paused) {
+        footstepsAudio.pause();
+        footstepsAudio.currentTime = 0;
+      }
+    };
+  }, [isPlayerMoving, gameState, lightState]);
 
   // Play audio cues
   useEffect(() => {
@@ -64,11 +165,28 @@ export const RedLightGreenLight = () => {
     }
   }, [lightState, gameState]);
 
+  // Play buzzer sound when player gets eliminated
   useEffect(() => {
     if (gameState === 'eliminated') {
-      const audio = audioRef.current.buzzer;
-      if (audio && audio.src) {
-        audio.play().catch(() => {});
+      const buzzerAudio = audioRef.current.buzzer;
+      if (buzzerAudio && buzzerAudio.src) {
+        buzzerAudio.currentTime = 0; // Reset to beginning
+        buzzerAudio.play().catch(() => {
+          console.log('Buzzer audio play failed (autoplay restrictions)');
+        });
+      }
+    }
+  }, [gameState]);
+
+  // Play win sound when player wins
+  useEffect(() => {
+    if (gameState === 'won') {
+      const youWinAudio = audioRef.current.youWin;
+      if (youWinAudio && youWinAudio.src) {
+        youWinAudio.currentTime = 0; // Reset to beginning
+        youWinAudio.play().catch(() => {
+          console.log('You win audio play failed (autoplay restrictions)');
+        });
       }
     }
   }, [gameState]);
@@ -160,7 +278,7 @@ export const RedLightGreenLight = () => {
       <Canvas
         shadows
         camera={{ 
-          position: [0, 5, -10],
+          position: FIELD_CONFIG.CAMERA_POSITION,
           fov: 50,
           near: 0.1,
           far: 300
@@ -176,11 +294,12 @@ export const RedLightGreenLight = () => {
           onPositionUpdate={updatePlayerPosition}
           modelPath={MODEL_CONFIG.player.path}
           onRefReady={(ref) => { (playerRef as any).current = ref.current; }}
+          onMovementChange={setIsPlayerMoving} // Pass movement state up
         />
         {/* Soldiers flanking the doll, facing players */}
         <Doll lightState={lightState} gameState={gameState} modelPath={MODEL_CONFIG.doll.path} />
-        <Soldier position={[-5, 0, 25]} rotation={[0, Math.PI, 0]} />
-        <Soldier position={[5, 0, 25]} rotation={[0, Math.PI, 0]} />
+        <Soldier position={FIELD_CONFIG.SOLDIER_POSITIONS[0]} rotation={[0, Math.PI, 0]} />
+        <Soldier position={FIELD_CONFIG.SOLDIER_POSITIONS[1]} rotation={[0, Math.PI, 0]} />
         {/* FollowCamera is mounted above */}
         
         {/* Camera controls - disabled during gameplay for better experience */}

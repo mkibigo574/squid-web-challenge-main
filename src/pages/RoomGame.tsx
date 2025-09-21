@@ -1,20 +1,28 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Canvas, useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
 import { multiplayerManager } from '@/lib/multiplayer';
 import { useHostLoop } from '../game/host/useHostLoop';
 import { Environment } from '../game/components/Environment';
 import { Player } from '../game/components/Player';
 import { Doll } from '../game/components/Doll';
 import { Soldier } from '../game/components/Soldier';
+import { Celebration } from '../game/components/Celebration';
 import { MODEL_CONFIG } from '../game/config/models';
+import { FIELD_CONFIG } from '../game/config/field';
 
 type PresencePlayer = { id: string; name?: string; isEliminated?: boolean; x?: number; z?: number; isMoving?: boolean };
 
-function PositionReporter({ groupRef, light, onSelfEliminate }: { groupRef: React.RefObject<THREE.Group>, light: 'green'|'red', onSelfEliminate: () => void }) {
-  const last = useRef({ x: 0, z: 0, t: 0 });
-  const lastSent = useRef(0);
-  const lastMoving = useRef(false);
+function PositionReporter({ groupRef, light, onSelfEliminate, onMovementChange }: { 
+  groupRef: React.RefObject<THREE.Group>, 
+  light: 'green'|'red', 
+  onSelfEliminate: () => void,
+  onMovementChange?: (isMoving: boolean) => void
+}) {
+  const last = useRef<{ x: number; z: number; t: number } | null>(null);
+  const lastMoving = useRef<boolean>(false);
+  const lastSent = useRef<number>(0);
   const eliminated = useRef(false);
   const redSince = useRef<number | null>(null);
   const movingDuringRedMs = useRef(0);
@@ -26,11 +34,19 @@ function PositionReporter({ groupRef, light, onSelfEliminate }: { groupRef: Reac
 
   useFrame(() => {
     const g = groupRef.current;
-    if (!g || eliminated.current) return;
+    if (!g) return;
 
     const now = performance.now();
-    const dt = Math.max(1, now - last.current.t);
-    const x = g.position.x, z = g.position.z;
+    const dt = (now - (last.current?.t || now)) / 1000;
+    const x = g.position.x;
+    const z = g.position.z;
+
+    // Add null check for last.current before accessing its properties
+    if (last.current === null) {
+      last.current = { x, z, t: now };
+      return;
+    }
+
     const dx = x - last.current.x, dz = z - last.current.z;
 
     const distSq = dx * dx + dz * dz;
@@ -42,6 +58,9 @@ function PositionReporter({ groupRef, light, onSelfEliminate }: { groupRef: Reac
       multiplayerManager.updatePlayerPosition({ x, z }, isMoving, true);
       lastSent.current = now;
       lastMoving.current = isMoving;
+      
+      // Notify parent component about movement change
+      onMovementChange?.(isMoving);
     } else if (now - lastSent.current > 100) {
       multiplayerManager.updatePlayerPosition({ x, z }, isMoving);
       lastSent.current = now;
@@ -56,6 +75,7 @@ function PositionReporter({ groupRef, light, onSelfEliminate }: { groupRef: Reac
         if (movingDuringRedMs.current > SUSTAIN_MS) {
           eliminated.current = true;
           onSelfEliminate();
+          
           multiplayerManager.setSelfPresence({ isEliminated: true, isMoving: false, x, z });
         }
       }
@@ -103,7 +123,7 @@ function WinChecker({ playerRef, onWin }: { playerRef: React.RefObject<THREE.Gro
     const g = playerRef.current;
     if (!g) return;
 
-    if (g.position.z >= 25) onWin();
+    if (g.position.z >= FIELD_CONFIG.WIN_Z_THRESHOLD) onWin();
   });
   return null;
 }
@@ -135,6 +155,151 @@ const RoomGame = () => {
   const [selfWon, setSelfWon] = useState(false);
   const [ended, setEnded] = useState(false);
   const [winners, setWinners] = useState<string[]>([]);
+
+  // Audio management for footsteps
+  const audioRef = useRef<{ [key: string]: HTMLAudioElement }>({});
+  const [isPlayerMoving, setIsPlayerMoving] = useState(false);
+
+  // Initialize audio with running footsteps file
+  useEffect(() => {
+    audioRef.current = {
+      greenLight: new Audio('/audio/green_light.wav'), // Green light sound
+      redLight: new Audio('/audio/red_light.wav'), // Red light sound
+      footsteps: new Audio('/audio/Running%20footsteps.wav'), // URL encoded for spaces
+      buzzer: new Audio('/audio/Buzzer.wav'), // Buzzer sound for elimination
+      youWin: new Audio('/audio/win_game.wav'), // Win sound
+    };
+
+    // Configure footsteps audio
+    const footstepsAudio = audioRef.current.footsteps;
+    footstepsAudio.loop = true;
+    footstepsAudio.volume = 0.6; // Adjust volume as needed
+    
+    // Configure green light audio
+    const greenLightAudio = audioRef.current.greenLight;
+    greenLightAudio.volume = 0.7; // Moderate volume for green light announcement
+    
+    // Configure red light audio
+    const redLightAudio = audioRef.current.redLight;
+    redLightAudio.volume = 0.7; // Moderate volume for red light announcement
+    
+    // Configure buzzer audio
+    const buzzerAudio = audioRef.current.buzzer;
+    buzzerAudio.volume = 0.8; // Slightly louder for elimination sound
+    
+    // Configure win audio
+    const youWinAudio = audioRef.current.youWin;
+    youWinAudio.volume = 0.8; // Moderate volume for win announcement
+    
+    // Add error handling for audio loading
+    footstepsAudio.addEventListener('error', (e) => {
+      console.error('Failed to load footsteps audio:', e);
+    });
+    
+    footstepsAudio.addEventListener('canplaythrough', () => {
+      console.log('Footsteps audio loaded successfully');
+    });
+    
+    greenLightAudio.addEventListener('error', (e) => {
+      console.error('Failed to load green light audio:', e);
+    });
+    
+    greenLightAudio.addEventListener('canplaythrough', () => {
+      console.log('Green light audio loaded successfully');
+    });
+    
+    redLightAudio.addEventListener('error', (e) => {
+      console.error('Failed to load red light audio:', e);
+    });
+    
+    redLightAudio.addEventListener('canplaythrough', () => {
+      console.log('Red light audio loaded successfully');
+    });
+    
+    buzzerAudio.addEventListener('error', (e) => {
+      console.error('Failed to load buzzer audio:', e);
+    });
+    
+    buzzerAudio.addEventListener('canplaythrough', () => {
+      console.log('Buzzer audio loaded successfully');
+    });
+    
+    youWinAudio.addEventListener('error', (e) => {
+      console.error('Failed to load you win audio:', e);
+    });
+    
+    youWinAudio.addEventListener('canplaythrough', () => {
+      console.log('You win audio loaded successfully');
+    });
+  }, []);
+
+  // Footsteps management
+  useEffect(() => {
+    const footstepsAudio = audioRef.current.footsteps;
+    
+    if (isPlayerMoving && gameState === 'playing' && lightState === 'green') {
+      // Start footsteps when player is moving during green light
+      if (footstepsAudio.paused) {
+        footstepsAudio.currentTime = 0; // Reset to beginning
+        footstepsAudio.play().catch(() => {
+          console.log('Footsteps audio play failed (autoplay restrictions)');
+        });
+      }
+    } else {
+      // Stop footsteps when not moving or during red light
+      if (!footstepsAudio.paused) {
+        footstepsAudio.pause();
+        footstepsAudio.currentTime = 0;
+      }
+    }
+
+    return () => {
+      // Cleanup: stop footsteps when component unmounts
+      if (footstepsAudio && !footstepsAudio.paused) {
+        footstepsAudio.pause();
+        footstepsAudio.currentTime = 0;
+      }
+    };
+  }, [isPlayerMoving, gameState, lightState]);
+
+  // Play audio cues for light state changes
+  useEffect(() => {
+    // Only play light audio if game is playing AND player hasn't won yet
+    if (gameState === 'playing' && !selfWon) {
+      const audio = audioRef.current[lightState === 'green' ? 'greenLight' : 'redLight'];
+      if (audio && audio.src) {
+        audio.play().catch(() => {
+          console.log('Light audio play failed (autoplay restrictions)');
+        });
+      }
+    }
+  }, [lightState, gameState, selfWon]);
+
+  // Play buzzer sound when player gets eliminated
+  useEffect(() => {
+    if (selfElim) {
+      const buzzerAudio = audioRef.current.buzzer;
+      if (buzzerAudio && buzzerAudio.src) {
+        buzzerAudio.currentTime = 0; // Reset to beginning
+        buzzerAudio.play().catch(() => {
+          console.log('Buzzer audio play failed (autoplay restrictions)');
+        });
+      }
+    }
+  }, [selfElim]);
+
+  // Play win sound when player wins
+  useEffect(() => {
+    if (selfWon) {
+      const youWinAudio = audioRef.current.youWin;
+      if (youWinAudio && youWinAudio.src) {
+        youWinAudio.currentTime = 0; // Reset to beginning
+        youWinAudio.play().catch(() => {
+          console.log('You win audio play failed (autoplay restrictions)');
+        });
+      }
+    }
+  }, [selfWon]);
 
   // subscribe to game state changes
   useEffect(() => {
@@ -243,6 +408,31 @@ const RoomGame = () => {
     }
   }, [timeLeft, selfElim, selfWon]);
 
+  // Listen for game reset events
+  useEffect(() => {
+    const onGameReset = () => {
+      console.log('Game reset received, resetting local state');
+      // Reset all local state
+      setSelfElim(false);
+      setSelfWon(false);
+      setEnded(false);
+      setWinners([]);
+      setGameState('waiting');
+      setLightState('green');
+      setTimeLeft(60);
+      // Reset player position
+      if (playerRef.current) {
+        playerRef.current.position.set(0, 0, -5);
+        playerRef.current.rotation.y = 0;
+      }
+      // Reset presence
+      multiplayerManager.setSelfPresence({ isEliminated: false, isMoving: false });
+    };
+
+    multiplayerManager.onEvent('GAME_RESET', onGameReset);
+    return () => multiplayerManager.offEvent('GAME_RESET', onGameReset);
+  }, []);
+
   const handleLeave = async () => {
     await multiplayerManager.leaveRoom();
     navigate('/lobby');
@@ -311,14 +501,17 @@ const RoomGame = () => {
         </div>
       )}
 
+      {/* Game in Progress section */}
       {gameState === 'playing' && (
-        <div className="absolute inset-x-0 top-14 z-10 mx-auto max-w-md bg-white/90 rounded p-4 text-center">
-          <div className="text-lg font-semibold mb-2">Game in Progress!</div>
-          <div className="text-sm text-gray-600">Light: {lightState}</div>
+        <div className="absolute top-4 right-4 z-10 bg-black/90 rounded p-3 text-center">
+          <div className="text-lg font-semibold text-green-400 mb-1">Game in Progress!</div>
+          <div className={`text-sm ${lightState === 'green' ? 'text-green-300' : 'text-red-400'}`}>
+            {lightState === 'green' ? 'Green Light!' : 'Red Light!'}
+          </div>
         </div>
       )}
 
-      <Canvas shadows camera={{ position: [0, 5, -10], fov: 50 }}>
+      <Canvas shadows camera={{ position: FIELD_CONFIG.CAMERA_POSITION, fov: 50 }}>
         <ambientLight intensity={0.6} />
         <directionalLight position={[5, 10, -5]} intensity={0.8} castShadow />
         <Environment />
@@ -333,29 +526,49 @@ const RoomGame = () => {
           onPositionUpdate={() => {}}
           modelPath={MODEL_CONFIG.player.path}
           onRefReady={(ref) => { (playerRef as any).current = ref.current; }}
+          canMove={gameState === 'playing'} // Only allow movement when game is playing
         />
 
-        <PositionReporter groupRef={playerRef} light={lightState} onSelfEliminate={() => setSelfElim(true)} />
+        <PositionReporter 
+          groupRef={playerRef} 
+          light={lightState} 
+          onSelfEliminate={() => setSelfElim(true)}
+          onMovementChange={setIsPlayerMoving}
+        />
         <Doll lightState={lightState} gameState={gameState} modelPath={MODEL_CONFIG.doll.path} />
-        <Soldier position={[-5, 0, 25]} rotation={[0, Math.PI, 0]} />
-        <Soldier position={[5, 0, 25]} rotation={[0, Math.PI, 0]} />
+        {FIELD_CONFIG.SOLDIER_POSITIONS.map((position, index) => (
+          <Soldier key={index} position={position} rotation={[0, Math.PI, 0]} />
+        ))}
 
         <RemotePlayers players={players} selfId={self.id!} />
         <WinChecker playerRef={playerRef} onWin={() => setSelfWon(true)} />
+        
+        {/* Celebration effects for winner */}
+        <Celebration gameState={selfWon ? 'won' : 'playing'} />
       </Canvas>
 
       {ended && isHost && (
         <button
           className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded bg-white/80"
           onClick={() => {
-            // host resets game
-            multiplayerManager.broadcastReset(60);
+            console.log('Reset button clicked!');
+            // host resets game - use broadcastGameReset instead of broadcastReset
+            multiplayerManager.broadcastGameReset(60);
             // local clear
             setSelfElim(false);
             setSelfWon(false);
             setEnded(false);
             setWinners([]);
+            setGameState('waiting'); // Add this to ensure start button appears
+            setLightState('green');  // Add this to ensure light resets
+            setTimeLeft(60);         // Add this to ensure timer resets
+            // Reset player position
+            if (playerRef.current) {
+              playerRef.current.position.set(0, 0, -5);
+              playerRef.current.rotation.y = 0;
+            }
             multiplayerManager.setSelfPresence({ isEliminated: false, isMoving: false });
+            console.log('Reset complete - gameState should be waiting, start button should appear');
           }}
         >
           Reset
@@ -366,3 +579,5 @@ const RoomGame = () => {
 };
 
 export default RoomGame;
+
+

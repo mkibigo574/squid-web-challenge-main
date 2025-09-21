@@ -14,6 +14,8 @@ interface PlayerProps {
   onPositionUpdate: (position: number) => void;
   modelPath?: string;
   onRefReady?: (ref: React.RefObject<THREE.Group>) => void;
+  onMovementChange?: (isMoving: boolean) => void; // Add this prop
+  canMove?: boolean; // Add this prop to control movement
 }
 
 // Fallback primitive player component
@@ -106,12 +108,18 @@ const GLBPlayer = ({ modelPath, state }: { modelPath: string; state: string }) =
     const mixer = mixerRef.current;
     if (!mixer || !animations) return;
 
+    console.log('GLBPlayer state change:', state, 'Available animations:', animations.map(a => a.name));
+
     // Helper to find the best matching clip by names
     const findByNames = (names: string[]): THREE.AnimationClip | undefined => {
       for (const name of names) {
         const clip = animations.find(a => new RegExp(name, 'i').test(a.name));
-        if (clip) return clip;
+        if (clip) {
+          console.log(`Found animation: ${clip.name} for pattern: ${name}`);
+          return clip;
+        }
       }
+      console.log(`No animation found for patterns: ${names.join(', ')}`);
       return undefined;
     };
 
@@ -130,24 +138,31 @@ const GLBPlayer = ({ modelPath, state }: { modelPath: string; state: string }) =
 
     let clip: THREE.AnimationClip | undefined;
     if (state === 'run') {
-      clip = findByNames(['run', 'walk']);
+      clip = findByNames(['run', 'walk', 'running', 'walking']);
     } else if (state === 'fall') {
-      clip = findByNames(['fall', 'death', 'die']);
+      clip = findByNames(['fall', 'death', 'die', 'falling', 'eliminated', 'elimination']);
     } else if (state === 'happy') {
-      clip = findByNames(['happy', 'victory', 'win', 'celebration']);
+      clip = findByNames(['happy', 'victory', 'win', 'celebration', 'winning']);
     }
 
-    if (!clip) return;
+    if (!clip) {
+      console.log(`No animation clip found for state: ${state}`);
+      return;
+    }
 
     const action = mixer.clipAction(clip);
     if (state === 'fall') {
       action.setLoop(THREE.LoopOnce, 1);
       action.clampWhenFinished = true;
+      // Make fall animation more visible
+      action.timeScale = 0.8; // Slightly slower but not too slow
+      console.log(`Fall animation duration: ${clip.duration}s, timeScale: 0.8`);
     } else {
       action.setLoop(THREE.LoopRepeat, Infinity);
     }
-    action.reset().fadeIn(0.2).play();
+    action.reset().fadeIn(0.3).play(); // Slightly longer fade for smoother transition
     actionRef.current = action;
+    console.log(`Playing animation: ${clip.name} for state: ${state}`);
   }, [state, animations]);
 
   return (
@@ -159,7 +174,16 @@ const GLBPlayer = ({ modelPath, state }: { modelPath: string; state: string }) =
   );
 };
 
-export const Player = ({ lightState, gameState, onElimination, onPositionUpdate, modelPath, onRefReady }: PlayerProps) => {
+export const Player = ({ 
+  lightState, 
+  gameState, 
+  onElimination, 
+  onPositionUpdate, 
+  modelPath, 
+  onRefReady,
+  onMovementChange, // Add this prop
+  canMove = true // Add this prop with default value
+}: PlayerProps) => {
   const eliminationAnimation = useRef(false);
   const [usePrimitive, setUsePrimitive] = useState(!modelPath);
   
@@ -170,8 +194,11 @@ export const Player = ({ lightState, gameState, onElimination, onPositionUpdate,
     lightState,
     onElimination,
     onPositionUpdate,
-    gameState === 'playing',
-    setIsMoving
+    gameState === 'playing' && canMove, // Only allow movement if game is playing AND canMove is true
+    (isMoving) => {
+      setIsMoving(isMoving);
+      onMovementChange?.(isMoving); // Pass movement state to parent
+    }
   );
 
   // Add refs near the top of Player component
@@ -229,13 +256,19 @@ export const Player = ({ lightState, gameState, onElimination, onPositionUpdate,
 
   // Elimination animation
   useEffect(() => {
+    console.log('Elimination effect triggered, gameState:', gameState, 'eliminationAnimation.current:', eliminationAnimation.current);
+    
     if (gameState === 'eliminated' && !eliminationAnimation.current) {
       eliminationAnimation.current = true;
       
+      console.log('Setting elimination animation, fallRef.current:', fallRef.current);
+      
+      // Let the GLB animation handle the fall, don't add manual rotation
+      // The Fall3 animation should handle the visual fall effect
       if (fallRef.current) {
-        // Fall animation
-        fallRef.current.rotation.x = Math.PI / 2;
-        fallRef.current.position.y = -0.5;
+        // Only apply subtle position adjustment, let animation do the work
+        fallRef.current.position.y = -0.2; // Small adjustment, not dramatic
+        console.log('Applied subtle fall position adjustment');
       }
     } else if (gameState !== 'eliminated') {
       eliminationAnimation.current = false;
