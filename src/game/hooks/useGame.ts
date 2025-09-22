@@ -7,12 +7,12 @@ export type LightState = 'green' | 'red';
 export const useGame = () => {
   const [gameState, setGameState] = useState<GameState>('waiting');
   const [lightState, setLightState] = useState<LightState>('green');
-  const [timeLeft, setTimeLeft] = useState(60);
+  const [timeLeft, setTimeLeft] = useState(50);
   const [playerPosition, setPlayerPosition] = useState(0);
   const [countdown, setCountdown] = useState(3);
   
   const FINISH_LINE = FIELD_CONFIG.FIELD_LENGTH_UNITS; // Use field config
-  const GAME_DURATION = 60;
+  const GAME_DURATION = 50;
 
   const startGame = useCallback(() => {
     setGameState('countdown');

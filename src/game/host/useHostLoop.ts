@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { multiplayerManager } from '@/lib/multiplayer';
 
-export function useHostLoop(active: boolean, gameState: 'waiting' | 'countdown' | 'playing') {
+export function useHostLoop(active: boolean, gameState: 'waiting' | 'countdown' | 'playing', resetKey?: number) {
   const [currentLightState, setCurrentLightState] = useState<'green' | 'red'>('green');
   const gameStartTime = useRef<number>(0);
-  const gameDuration = 60; // 60 seconds
+  const gameDuration = 50; // 50 seconds
   const lightTimeoutRef = useRef<number | undefined>();
   const timerTimeoutRef = useRef<number | undefined>();
   const FINISH_Z = 25;
@@ -20,6 +20,16 @@ export function useHostLoop(active: boolean, gameState: 'waiting' | 'countdown' 
       timerTimeoutRef.current = undefined;
     }
   };
+
+  // Reset state when resetKey changes
+  useEffect(() => {
+    if (resetKey !== undefined && resetKey > 0) {
+      console.log('useHostLoop reset triggered, resetKey:', resetKey);
+      setCurrentLightState('green');
+      gameStartTime.current = 0;
+      clearTimeouts();
+    }
+  }, [resetKey]);
 
   // Light state management - 3-5 seconds per state for better playability
   useEffect(() => {
@@ -92,7 +102,9 @@ export function useHostLoop(active: boolean, gameState: 'waiting' | 'countdown' 
 
   // Function to start the game
   const startGame = () => {
+    console.log('startGame called, active:', active, 'gameState:', gameState);
     if (active) {
+      console.log('Starting game - broadcasting countdown');
       // Reset light state
       setCurrentLightState('green');
       
@@ -101,12 +113,23 @@ export function useHostLoop(active: boolean, gameState: 'waiting' | 'countdown' 
       
       // Start playing after 3 seconds (matching single player countdown)
       setTimeout(() => {
+        console.log('Starting playing phase');
         gameStartTime.current = performance.now();
         setCurrentLightState('green');
         multiplayerManager.broadcastGameState('playing', 'green', gameDuration);
       }, 3000);
+    } else {
+      console.log('Cannot start game - not active');
     }
   };
 
-  return { startGame };
+  // Reset function to manually reset the hook state
+  const reset = () => {
+    console.log('useHostLoop manual reset called');
+    setCurrentLightState('green');
+    gameStartTime.current = 0;
+    clearTimeouts();
+  };
+
+  return { startGame, reset };
 }

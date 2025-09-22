@@ -10,7 +10,8 @@ export const usePlayerMovement = (
   onElimination: () => void,
   onPositionUpdate: (position: number) => void,
   gameActive: boolean,
-  onMoveChange?: (isMoving: boolean) => void
+  onMoveChange?: (isMoving: boolean) => void,
+  resetKey?: number
 ) => {
   const playerGroupRef = useRef<THREE.Group>(null);
   const velocityRef = useRef(new THREE.Vector3(0, 0, 0));
@@ -18,6 +19,17 @@ export const usePlayerMovement = (
   const wasMovingDuringRedLight = useRef(false);
   const lastMovingRef = useRef<boolean>(false);
   const { camera } = useThree();
+
+  // Reset movement state when resetKey changes
+  useEffect(() => {
+    if (resetKey !== undefined && resetKey > 0) {
+      velocityRef.current.set(0, 0, 0);
+      keysPressed.current.clear();
+      wasMovingDuringRedLight.current = false;
+      lastMovingRef.current = false;
+      console.log('usePlayerMovement state reset');
+    }
+  }, [resetKey]);
 
   // Use centralized field configuration
   const MOVE_SPEED = FIELD_CONFIG.UNITS_PER_SEC;

@@ -16,6 +16,7 @@ interface PlayerProps {
   onRefReady?: (ref: React.RefObject<THREE.Group>) => void;
   onMovementChange?: (isMoving: boolean) => void; // Add this prop
   canMove?: boolean; // Add this prop to control movement
+  resetKey?: number; // Add reset key prop
 }
 
 // Fallback primitive player component
@@ -182,13 +183,22 @@ export const Player = ({
   modelPath, 
   onRefReady,
   onMovementChange, // Add this prop
-  canMove = true // Add this prop with default value
+  canMove = true, // Add this prop with default value
+  resetKey = 0 // Add reset key prop
 }: PlayerProps) => {
   const eliminationAnimation = useRef(false);
   const [usePrimitive, setUsePrimitive] = useState(!modelPath);
   
   const [isMoving, setIsMoving] = useState(false);
   const [assetChecked, setAssetChecked] = useState(false);
+
+  // Reset internal state when resetKey changes
+  useEffect(() => {
+    if (resetKey > 0) {
+      setIsMoving(false);
+      console.log('Player internal state reset');
+    }
+  }, [resetKey]);
 
   const { playerGroupRef } = usePlayerMovement(
     lightState,
@@ -198,7 +208,8 @@ export const Player = ({
     (isMoving) => {
       setIsMoving(isMoving);
       onMovementChange?.(isMoving); // Pass movement state to parent
-    }
+    },
+    resetKey // Pass reset key to usePlayerMovement
   );
 
   // Add refs near the top of Player component

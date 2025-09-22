@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { multiplayerManager } from '@/lib/multiplayer';
 import { useHostLoop } from '../game/host/useHostLoop';
@@ -13,6 +13,9 @@ import { MODEL_CONFIG } from '../game/config/models';
 import { FIELD_CONFIG } from '../game/config/field';
 
 type PresencePlayer = { id: string; name?: string; isEliminated?: boolean; x?: number; z?: number; isMoving?: boolean };
+
+// Camera modes for multiplayer
+type CameraMode = 'follow' | 'closeup' | 'drone' | 'firstPerson';
 
 function PositionReporter({ groupRef, light, onSelfEliminate, onMovementChange }: { 
   groupRef: React.RefObject<THREE.Group>, 
@@ -128,6 +131,69 @@ function WinChecker({ playerRef, onWin }: { playerRef: React.RefObject<THREE.Gro
   return null;
 }
 
+// Camera rig with multiple modes - same as single player
+const FollowCamera = ({ targetRef, cameraMode }: { targetRef: React.RefObject<THREE.Group>; cameraMode: CameraMode }) => {
+  const { camera } = useThree();
+  useEffect(() => {
+    const cam = camera as THREE.PerspectiveCamera;
+    cam.near = 0.1;
+    cam.far = 500;
+    cam.updateProjectionMatrix();
+  }, [camera]);
+
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      const target = targetRef.current;
+      if (target) {
+        const worldPos = target.position.clone();
+        let desiredPos = camera.position.clone();
+        let lookAt = new THREE.Vector3();
+        const cam = camera as THREE.PerspectiveCamera;
+        let targetFov = cam.fov;
+
+        if (cameraMode === 'follow') {
+          desiredPos = worldPos.clone().add(new THREE.Vector3(2.5, 3.0, -6.0));
+          lookAt = worldPos.clone().add(new THREE.Vector3(0, 1.0, 6));
+          targetFov = 50;
+        } else if (cameraMode === 'closeup') {
+          // Cinematic close-up: slightly below and to the side, tighter FOV
+          desiredPos = worldPos.clone().add(new THREE.Vector3(1.2, 1.2, -2.2));
+          lookAt = worldPos.clone().add(new THREE.Vector3(0, 1.4, 3));
+          targetFov = 35;
+        } else if (cameraMode === 'drone') {
+          // High-altitude top-down over the field center
+          desiredPos = new THREE.Vector3(0, 50, 10);
+          lookAt = new THREE.Vector3(0, 0, 10);
+          targetFov = 60;
+        } else {
+          // firstPerson: at player head, slight handheld shake
+          const time = performance.now() * 0.001;
+          const shake = new THREE.Vector3(
+            Math.sin(time * 12) * 0.03,
+            Math.sin(time * 15 + 1) * 0.025,
+            0
+          );
+          desiredPos = worldPos.clone().add(new THREE.Vector3(0.0, 1.6, 0.2)).add(shake);
+          lookAt = worldPos.clone().add(new THREE.Vector3(0, 1.5, 6));
+          targetFov = 55;
+        }
+
+        cam.position.lerp(desiredPos, 0.12);
+        cam.lookAt(lookAt);
+
+        // Smoothly lerp FOV per mode
+        cam.fov += (targetFov - cam.fov) * 0.1;
+        cam.updateProjectionMatrix();
+      }
+      raf = requestAnimationFrame(update);
+    };
+    raf = requestAnimationFrame(update);
+    return () => cancelAnimationFrame(raf);
+  }, [camera, targetRef, cameraMode]);
+  return null;
+};
+
 const RoomGame = () => {
   const { code } = useParams();
   const [sp] = useSearchParams();
@@ -147,14 +213,21 @@ const RoomGame = () => {
 
   const playerRef = useRef<THREE.Group>(null);
 
+  // Camera mode state - same as single player
+  const [cameraMode, setCameraMode] = useState<CameraMode>('follow');
+
   const [gameState, setGameState] = useState<'waiting'|'countdown'|'playing'>('waiting');
   const [lightState, setLightState] = useState<'green'|'red'>('green');
-  const [timeLeft, setTimeLeft] = useState<number>(60);
+  const [timeLeft, setTimeLeft] = useState<number>(50);
   const [isHost, setIsHost] = useState(false);
   const [selfElim, setSelfElim] = useState(false);
   const [selfWon, setSelfWon] = useState(false);
   const [ended, setEnded] = useState(false);
   const [winners, setWinners] = useState<string[]>([]);
+
+  // Progress tracking for multiplayer
+  const [playerPosition, setPlayerPosition] = useState(0);
+  const progress = playerPosition / FIELD_CONFIG.FIELD_LENGTH_UNITS;
 
   // Audio management for footsteps
   const audioRef = useRef<{ [key: string]: HTMLAudioElement }>({});
@@ -301,6 +374,20 @@ const RoomGame = () => {
     }
   }, [selfWon]);
 
+  // Spacebar cycles camera modes - same as single player
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setCameraMode((mode) =>
+          mode === 'follow' ? 'closeup' : mode === 'closeup' ? 'drone' : mode === 'drone' ? 'firstPerson' : 'follow'
+        );
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   // subscribe to game state changes
   useEffect(() => {
     const onGame = (payload: any) => {
@@ -338,7 +425,14 @@ const RoomGame = () => {
   }, [self.id]);
 
   // run host loop if chosen - pass the current game state
-  const { startGame } = useHostLoop(isHost, gameState);
+  // Use a key to force remount when game resets to clear internal state
+  const [hostLoopKey, setHostLoopKey] = useState(0);
+  const { startGame, reset: resetHostLoop } = useHostLoop(isHost, gameState, hostLoopKey);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('RoomGame state:', { isHost, gameState, hostLoopKey, startGame: !!startGame, progress, playerPosition });
+  }, [isHost, gameState, hostLoopKey, startGame, progress, playerPosition]);
 
   // Set up players event listener
   useEffect(() => {
@@ -419,7 +513,11 @@ const RoomGame = () => {
       setWinners([]);
       setGameState('waiting');
       setLightState('green');
-      setTimeLeft(60);
+      setTimeLeft(50);
+      setIsPlayerMoving(false); // Reset movement state to stop running in place
+      setPlayerPosition(0); // Reset player position for progress bar
+      setHostLoopKey(prev => prev + 1); // Force host loop remount
+      resetHostLoop(); // Manually reset host loop
       // Reset player position
       if (playerRef.current) {
         playerRef.current.position.set(0, 0, -5);
@@ -439,7 +537,7 @@ const RoomGame = () => {
   };
 
   const handleStartGame = () => {
-    console.log('Start game clicked!', { isHost, gameState, startGame });
+    console.log('Start game clicked!', { isHost, gameState, startGame: !!startGame, hostLoopKey });
     if (isHost) {
       console.log('Calling startGame function');
       startGame();
@@ -501,6 +599,22 @@ const RoomGame = () => {
         </div>
       )}
 
+      {/* Progress bar - same as single player */}
+      {gameState === 'playing' && (
+        <div className="absolute bottom-8 left-8 right-8 pointer-events-auto">
+          <div className="bg-black/50 p-4 rounded-lg">
+            <div className="text-white mb-2">Progress to Finish Line</div>
+            <div className="text-white text-sm mb-2">Debug: Progress = {progress.toFixed(3)} ({Math.min(100, Math.max(0, progress * 100)).toFixed(1)}%)</div>
+            <div className="w-full bg-gray-700 rounded-full h-4">
+              <div 
+                className="bg-green-500 h-4 rounded-full transition-all duration-300 ease-out"
+                style={{ width: `${Math.min(100, Math.max(0, progress * 100))}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Game in Progress section */}
       {gameState === 'playing' && (
         <div className="absolute top-4 right-4 z-10 bg-black/90 rounded p-3 text-center">
@@ -511,7 +625,17 @@ const RoomGame = () => {
         </div>
       )}
 
-      <Canvas shadows camera={{ position: FIELD_CONFIG.CAMERA_POSITION, fov: 50 }}>
+      <Canvas
+        shadows
+        camera={{ 
+          position: FIELD_CONFIG.CAMERA_POSITION,
+          fov: 50,
+          near: 0.1,
+          far: 300
+        }}
+      >
+        {/* Camera rig; press Space to cycle modes */}
+        <FollowCamera targetRef={playerRef} cameraMode={cameraMode} />
         <ambientLight intensity={0.6} />
         <directionalLight position={[5, 10, -5]} intensity={0.8} castShadow />
         <Environment />
@@ -523,10 +647,14 @@ const RoomGame = () => {
             setSelfElim(true);
             multiplayerManager.setSelfPresence({ isEliminated: true, isMoving: false });
           }}
-          onPositionUpdate={() => {}}
+          onPositionUpdate={(position) => {
+            console.log('Position update received:', position, 'Progress:', position / FIELD_CONFIG.FIELD_LENGTH_UNITS);
+            setPlayerPosition(position);
+          }}
           modelPath={MODEL_CONFIG.player.path}
           onRefReady={(ref) => { (playerRef as any).current = ref.current; }}
           canMove={gameState === 'playing'} // Only allow movement when game is playing
+          resetKey={hostLoopKey} // Pass reset key to Player component
         />
 
         <PositionReporter 
@@ -552,8 +680,9 @@ const RoomGame = () => {
           className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded bg-white/80"
           onClick={() => {
             console.log('Reset button clicked!');
+            console.log('Before reset - isHost:', isHost, 'gameState:', gameState, 'hostLoopKey:', hostLoopKey);
             // host resets game - use broadcastGameReset instead of broadcastReset
-            multiplayerManager.broadcastGameReset(60);
+            multiplayerManager.broadcastGameReset(50);
             // local clear
             setSelfElim(false);
             setSelfWon(false);
@@ -561,7 +690,15 @@ const RoomGame = () => {
             setWinners([]);
             setGameState('waiting'); // Add this to ensure start button appears
             setLightState('green');  // Add this to ensure light resets
-            setTimeLeft(60);         // Add this to ensure timer resets
+            setTimeLeft(50);         // Add this to ensure timer resets
+            setIsPlayerMoving(false); // Reset movement state to stop running in place
+            setPlayerPosition(0); // Reset player position for progress bar
+            setHostLoopKey(prev => {
+              const newKey = prev + 1;
+              console.log('Incrementing hostLoopKey from', prev, 'to', newKey);
+              return newKey;
+            }); // Force host loop remount
+            resetHostLoop(); // Manually reset host loop
             // Reset player position
             if (playerRef.current) {
               playerRef.current.position.set(0, 0, -5);

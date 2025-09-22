@@ -367,7 +367,7 @@ class MultiplayerManager {
     });
   }
 
-  broadcastReset(initialTime = 60) {
+  broadcastReset(initialTime = 50) {
     return this.channel?.send({
       type: 'broadcast',
       event: 'game_state',
@@ -376,7 +376,7 @@ class MultiplayerManager {
   }
 
   // New comprehensive reset function
-  broadcastGameReset(initialTime = 60) {
+  broadcastGameReset(initialTime = 50) {
     // Reset all players to starting position
     if (this.selfPresence) {
       this.selfPresence = {

@@ -169,14 +169,16 @@ export const GameUI = ({
         )}
         
         {gameState === 'won' && (
-          <div className="space-y-4 animate-bounce">
-            <h2 className="text-8xl font-bold text-green-400 drop-shadow-lg">
-              🎉 YOU WIN! 🎉
-            </h2>
-            <p className="text-2xl text-white drop-shadow-lg">
-              Congratulations! You reached the finish line!
-            </p>
-            <div className="text-4xl">🎈🎊🎉🎈🎊🎉</div>
+          <div className="space-y-4">
+            <div className="animate-bounce">
+              <h2 className="text-8xl font-bold text-green-400 drop-shadow-lg">
+                🎉 YOU WIN! 🎉
+              </h2>
+              <p className="text-2xl text-white drop-shadow-lg">
+                Congratulations! You reached the finish line!
+              </p>
+              <div className="text-4xl">🎈🎊🎉🎈🎊🎉</div>
+            </div>
             <Button onClick={onResetGame} size="lg" className="text-xl px-8 py-4 bg-green-600 hover:bg-green-700">
               Play Again
             </Button>
