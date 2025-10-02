@@ -4,28 +4,49 @@ import * as THREE from 'three';
 import { MODEL_CONFIG } from '../config/models';
 import { FIELD_CONFIG } from '../config/field';
 
-// Tree component using the 3D model
+// Tree component using the 3D model with error handling
 const TreeModel = ({ position, rotation = [0, 0, 0], scale = [1, 1, 1] }: { 
   position: [number, number, number], 
   rotation?: [number, number, number], 
   scale?: [number, number, number] 
 }) => {
-  const { scene } = useGLTF(MODEL_CONFIG.tree.path);
-  const clonedScene = useRef<THREE.Group>();
+  try {
+    const { scene } = useGLTF(MODEL_CONFIG.tree.path);
+    const clonedScene = useRef<THREE.Group>();
 
-  if (!clonedScene.current) {
-    clonedScene.current = scene.clone();
+    if (!clonedScene.current) {
+      clonedScene.current = scene.clone();
+    }
+
+    return (
+      <group position={position} rotation={rotation} scale={scale}>
+        <primitive object={clonedScene.current} />
+      </group>
+    );
+  } catch (error) {
+    console.warn('Failed to load tree model, using fallback:', error);
+    // Fallback to simple geometry
+    return (
+      <group position={position} rotation={rotation} scale={scale}>
+        <mesh>
+          <cylinderGeometry args={[2, 4, 8]} />
+          <meshLambertMaterial color="#228B22" />
+        </mesh>
+        <mesh position={[0, 4, 0]}>
+          <sphereGeometry args={[3]} />
+          <meshLambertMaterial color="#32CD32" />
+        </mesh>
+      </group>
+    );
   }
-
-  return (
-    <group position={position} rotation={rotation} scale={scale}>
-      <primitive object={clonedScene.current} />
-    </group>
-  );
 };
 
-// Preload the tree model
-useGLTF.preload(MODEL_CONFIG.tree.path);
+// Preload the tree model with error handling
+try {
+  useGLTF.preload(MODEL_CONFIG.tree.path);
+} catch (error) {
+  console.warn('Failed to preload tree model:', error);
+}
 
 export const Environment = () => {
   return (

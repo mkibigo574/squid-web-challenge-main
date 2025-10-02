@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { multiplayerManager } from '@/lib/multiplayer';
 import { useHostLoop } from '../game/host/useHostLoop';
@@ -9,10 +10,12 @@ import { Player } from '../game/components/Player';
 import { Doll } from '../game/components/Doll';
 import { Soldier } from '../game/components/Soldier';
 import { Celebration } from '../game/components/Celebration';
+import { MultiplayerTugOfWar } from '../game/MultiplayerTugOfWar';
 import { MODEL_CONFIG } from '../game/config/models';
 import { FIELD_CONFIG } from '../game/config/field';
 
 type PresencePlayer = { id: string; name?: string; isEliminated?: boolean; x?: number; z?: number; isMoving?: boolean };
+type GameType = 'red-light-green-light' | 'tug-of-war';
 
 // Camera modes for multiplayer
 type CameraMode = 'follow' | 'closeup' | 'drone' | 'firstPerson';
@@ -50,42 +53,38 @@ function PositionReporter({ groupRef, light, onSelfEliminate, onMovementChange }
       return;
     }
 
-    const dx = x - last.current.x, dz = z - last.current.z;
+    const dx = x - last.current.x;
+    const dz = z - last.current.z;
+    const distance = Math.sqrt(dx * dx + dz * dz);
+    const speed = distance / dt;
+    const isMoving = speed > 0.01; // Threshold for movement detection
 
-    const distSq = dx * dx + dz * dz;
-    const MIN_DIST_PER_FRAME = 0.0004;
-    const isMoving = distSq > MIN_DIST_PER_FRAME;
-
-    const movementChanged = isMoving !== lastMoving.current;
-    if (movementChanged) {
-      multiplayerManager.updatePresence({ x, z, isMoving });
-      lastSent.current = now;
+    if (isMoving !== lastMoving.current) {
       lastMoving.current = isMoving;
-      
-      // Notify parent component about movement change
       onMovementChange?.(isMoving);
-    } else if (now - lastSent.current > 100) {
-      multiplayerManager.updatePresence({ x, z, isMoving });
-      lastSent.current = now;
     }
 
-    if (light === 'red' && redSince.current != null) {
-      const GRACE_MS = 200;
-      const SUSTAIN_MS = 150;
-      if (now - redSince.current > GRACE_MS) {
-        if (isMoving) movingDuringRedMs.current += dt;
-        else movingDuringRedMs.current = 0;
-        if (movingDuringRedMs.current > SUSTAIN_MS) {
+    // Check for elimination during red light
+    if (light === 'red' && isMoving && !eliminated.current) {
+      const now = performance.now();
+      if (redSince.current) {
+        movingDuringRedMs.current += now - (last.current?.t || now);
+        if (movingDuringRedMs.current > 100) { // 100ms grace period
           eliminated.current = true;
           onSelfEliminate();
-          
-          multiplayerManager.setSelfPresence({ isEliminated: true, isMoving: false, x, z });
         }
       }
     }
 
+    // Send position update every 100ms
+    if (now - lastSent.current > 100) {
+      multiplayerManager.updatePresence({ x, z, isMoving, ts: now });
+      lastSent.current = now;
+    }
+
     last.current = { x, z, t: now };
   });
+
   return null;
 }
 
@@ -241,28 +240,30 @@ const FollowCamera = ({ targetRef, cameraMode }: { targetRef: React.RefObject<TH
   return null;
 };
 
-const RoomGame = () => {
-  const { code } = useParams();
-  const [sp] = useSearchParams();
+export default function MultiplayerRoomGame() {
+  const { code } = useParams<{ code: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const [players, setPlayers] = useState<PresencePlayer[]>([]);
   const [status, setStatus] = useState('Connecting…');
+  const [gameType, setGameType] = useState<GameType>('red-light-green-light');
 
   const self = useMemo(() => ({
-    id: sp.get('id') || crypto.randomUUID(),
-    name: sp.get('name') || 'Player'
-  }), [sp]);
+    id: searchParams.get('id') || crypto.randomUUID(),
+    name: searchParams.get('name') || 'Player'
+  }), [searchParams]);
 
-  const isCreator = sp.get('creator') === 'true';
+  const isCreator = searchParams.get('creator') === 'true';
   const hasJoined = useRef(false);
   const joinPromise = useRef<Promise<void> | null>(null);
 
   const playerRef = useRef<THREE.Group>(null);
 
-  // Camera mode state - same as single player
+  // Camera mode state
   const [cameraMode, setCameraMode] = useState<CameraMode>('follow');
 
+  // Red Light Green Light game state
   const [gameState, setGameState] = useState<'waiting'|'countdown'|'playing'>('waiting');
   const [lightState, setLightState] = useState<'green'|'red'>('green');
   const [timeLeft, setTimeLeft] = useState<number>(50);
@@ -276,150 +277,50 @@ const RoomGame = () => {
   const [playerPosition, setPlayerPosition] = useState(0);
   const progress = playerPosition / FIELD_CONFIG.FIELD_LENGTH_UNITS;
 
-  // Audio management for footsteps
+  // Audio management
   const audioRef = useRef<{ [key: string]: HTMLAudioElement }>({});
   const [isPlayerMoving, setIsPlayerMoving] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
-  // Initialize audio with running footsteps file
+  // Use host loop for Red Light Green Light
+  const [hostLoopKey, setHostLoopKey] = useState(0);
+  const { startGame: startHostLoop, reset: resetHostLoop } = useHostLoop(isHost, gameState, hostLoopKey);
+
+  // Initialize audio
   useEffect(() => {
     audioRef.current = {
-      greenLight: new Audio('/audio/green_light.wav'), // Green light sound
-      redLight: new Audio('/audio/red_light.wav'), // Red light sound
-      footsteps: new Audio('/audio/Running%20footsteps.wav'), // URL encoded for spaces
-      buzzer: new Audio('/audio/Buzzer.wav'), // Buzzer sound for elimination
-      youWin: new Audio('/audio/win_game.wav'), // Win sound
+      greenLight: new Audio('/audio/green_light.wav'),
+      redLight: new Audio('/audio/red_light.wav'),
+      footsteps: new Audio('/audio/Running%20footsteps.wav'),
+      buzzer: new Audio('/audio/Buzzer.wav'),
+      youWin: new Audio('/audio/win_game.wav'),
     };
 
-    // Configure footsteps audio
-    const footstepsAudio = audioRef.current.footsteps;
-    footstepsAudio.loop = true;
-    footstepsAudio.volume = 0.6; // Adjust volume as needed
-    
-    // Configure green light audio
-    const greenLightAudio = audioRef.current.greenLight;
-    greenLightAudio.volume = 0.7; // Moderate volume for green light announcement
-    
-    // Configure red light audio
-    const redLightAudio = audioRef.current.redLight;
-    redLightAudio.volume = 0.7; // Moderate volume for red light announcement
-    
-    // Configure buzzer audio
-    const buzzerAudio = audioRef.current.buzzer;
-    buzzerAudio.volume = 0.8; // Slightly louder for elimination sound
-    
-    // Configure win audio
-    const youWinAudio = audioRef.current.youWin;
-    youWinAudio.volume = 0.8; // Moderate volume for win announcement
-    
-    // Add error handling for audio loading
-    footstepsAudio.addEventListener('error', (e) => {
-      console.error('Failed to load footsteps audio:', e);
+    // Configure audio
+    Object.values(audioRef.current).forEach(audio => {
+      audio.volume = 0.7;
+      audio.muted = isMuted;
     });
-    
-    footstepsAudio.addEventListener('canplaythrough', () => {
-      console.log('Footsteps audio loaded successfully');
-    });
-    
-    greenLightAudio.addEventListener('error', (e) => {
-      console.error('Failed to load green light audio:', e);
-    });
-    
-    greenLightAudio.addEventListener('canplaythrough', () => {
-      console.log('Green light audio loaded successfully');
-    });
-    
-    redLightAudio.addEventListener('error', (e) => {
-      console.error('Failed to load red light audio:', e);
-    });
-    
-    redLightAudio.addEventListener('canplaythrough', () => {
-      console.log('Red light audio loaded successfully');
-    });
-    
-    buzzerAudio.addEventListener('error', (e) => {
-      console.error('Failed to load buzzer audio:', e);
-    });
-    
-    buzzerAudio.addEventListener('canplaythrough', () => {
-      console.log('Buzzer audio loaded successfully');
-    });
-    
-    youWinAudio.addEventListener('error', (e) => {
-      console.error('Failed to load you win audio:', e);
-    });
-    
-    youWinAudio.addEventListener('canplaythrough', () => {
-      console.log('You win audio loaded successfully');
-    });
-  }, []);
-
-  // Footsteps management
-  useEffect(() => {
-    const footstepsAudio = audioRef.current.footsteps;
-    
-    if (isPlayerMoving && gameState === 'playing' && lightState === 'green') {
-      // Start footsteps when player is moving during green light
-      if (footstepsAudio.paused) {
-        footstepsAudio.currentTime = 0; // Reset to beginning
-        footstepsAudio.play().catch(() => {
-          console.log('Footsteps audio play failed (autoplay restrictions)');
-        });
-      }
-    } else {
-      // Stop footsteps when not moving or during red light
-      if (!footstepsAudio.paused) {
-        footstepsAudio.pause();
-        footstepsAudio.currentTime = 0;
-      }
-    }
 
     return () => {
-      // Cleanup: stop footsteps when component unmounts
-      if (footstepsAudio && !footstepsAudio.paused) {
-        footstepsAudio.pause();
-        footstepsAudio.currentTime = 0;
-      }
+      Object.values(audioRef.current).forEach(audio => {
+        audio.pause();
+        audio.currentTime = 0;
+      });
     };
-  }, [isPlayerMoving, gameState, lightState]);
+  }, [isMuted]);
 
-  // Play audio cues for light state changes
-  useEffect(() => {
-    // Only play light audio if game is playing AND player hasn't won yet
-    if (gameState === 'playing' && !selfWon) {
-      const audio = audioRef.current[lightState === 'green' ? 'greenLight' : 'redLight'];
-      if (audio && audio.src) {
-        audio.play().catch(() => {
-          console.log('Light audio play failed (autoplay restrictions)');
-        });
-      }
-    }
-  }, [lightState, gameState, selfWon]);
-
-  // Play buzzer sound when player gets eliminated
-  useEffect(() => {
-    if (selfElim) {
-      const buzzerAudio = audioRef.current.buzzer;
-      if (buzzerAudio && buzzerAudio.src) {
-        buzzerAudio.currentTime = 0; // Reset to beginning
-        buzzerAudio.play().catch(() => {
-          console.log('Buzzer audio play failed (autoplay restrictions)');
-        });
-      }
-    }
-  }, [selfElim]);
-
-  // Play win sound when player wins
-  useEffect(() => {
-    if (selfWon) {
-      const youWinAudio = audioRef.current.youWin;
-      if (youWinAudio && youWinAudio.src) {
-        youWinAudio.currentTime = 0; // Reset to beginning
-        youWinAudio.play().catch(() => {
-          console.log('You win audio play failed (autoplay restrictions)');
-        });
-      }
-    }
-  }, [selfWon]);
+  // Mute toggle function
+  const toggleMute = () => {
+    const newMutedState = !isMuted;
+    setIsMuted(newMutedState);
+    
+    Object.values(audioRef.current).forEach(audio => {
+      audio.muted = newMutedState;
+    });
+    
+    console.log(`Audio ${newMutedState ? 'muted' : 'unmuted'}`);
+  };
 
   // Spacebar cycles camera modes - same as single player
   useEffect(() => {
@@ -437,186 +338,100 @@ const RoomGame = () => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  // subscribe to game state changes
+  // Join room logic
   useEffect(() => {
-    const onGame = (payload: any) => {
-      setGameState(payload.gameState);
-      setLightState(payload.lightState);
-      setTimeLeft(payload.timeLeft);
-      if (payload.gameState === 'ended') {
-        setEnded(true);
-        setWinners(Array.isArray(payload.winners) ? payload.winners : []);
-      } else {
-        setEnded(false);
-        setWinners([]);
-      }
-    };
-    multiplayerManager.onEvent('GAME_STATE_CHANGED', onGame);
-    return () => { multiplayerManager.offEvent('GAME_STATE_CHANGED', onGame); };
-  }, []);
-
-  // subscribe to host changes
-  useEffect(() => {
-    const onHostChange = (payload: any) => {
-      setIsHost(payload.hostId === self.id);
-    };
-    const onRoomUpdate = (metadata: any) => {
-      setIsHost(metadata?.hostId === self.id);
-    };
+    if (!code || hasJoined.current) return;
     
-    multiplayerManager.onEvent('HOST_CHANGED', onHostChange);
-    multiplayerManager.onEvent('ROOM_UPDATED', onRoomUpdate);
-    
-    return () => {
-      multiplayerManager.offEvent('HOST_CHANGED', onHostChange);
-      multiplayerManager.offEvent('ROOM_UPDATED', onRoomUpdate);
-    };
-  }, [self.id]);
-
-  // run host loop if chosen - pass the current game state
-  // Use a key to force remount when game resets to clear internal state
-  const [hostLoopKey, setHostLoopKey] = useState(0);
-  const { startGame, reset: resetHostLoop } = useHostLoop(isHost, gameState, hostLoopKey);
-
-  // Debug logging
-  useEffect(() => {
-    console.log('RoomGame state:', { isHost, gameState, hostLoopKey, startGame: !!startGame, progress, playerPosition });
-  }, [isHost, gameState, hostLoopKey, startGame, progress, playerPosition]);
-
-  // Set up players event listener
-  useEffect(() => {
-    const onPlayers = (p: PresencePlayer[]) => {
-      console.log('Players updated:', p.length, 'players');
-      setPlayers(p);
-    };
-    
-    multiplayerManager.onEvent('PLAYERS_UPDATED', onPlayers);
-    
-    return () => {
-      multiplayerManager.offEvent('PLAYERS_UPDATED', onPlayers);
-    };
-  }, []);
-
-  // Join room and set up polling
-  useEffect(() => {
-    if (!code || hasJoined.current || joinPromise.current) return;
-    
-    console.log('Joining room with code:', code, 'self:', self.id, 'isCreator:', isCreator);
     hasJoined.current = true;
+    setStatus('Joining room...');
     
     const joinRoom = async () => {
       try {
-        await multiplayerManager.joinRoom(code, { id: self.id!, name: self.name! }, isCreator);
-        setStatus(`In room ${code}`);
+        await multiplayerManager.joinRoom(code, self, isCreator);
+        setStatus('Connected');
         
-        // Set room metadata with host info
+        // Set room metadata
         multiplayerManager.setRoomMetadata({
           hostId: isCreator ? self.id : undefined,
           createdAt: Date.now(),
           isCreator,
+          gameType: 'red-light-green-light'
         });
         
-        // Add a small delay to ensure metadata is set
-        setTimeout(() => {
-          const roomMetadata = multiplayerManager.getRoomMetadata();
-          console.log('- roomMetadata:', roomMetadata);
-          if (roomMetadata?.hostId === self.id) {
-            console.log('- Setting isHost to true');
-            setIsHost(true);
-          } else {
-            console.log('- Not setting as host, hostId mismatch or missing');
-          }
-        }, 100);
-
-  
-        // Check host status immediately after joining
-        const roomMetadata = multiplayerManager.getRoomMetadata();
-        if (roomMetadata?.hostId === self.id) {
+        // Set host status immediately if creator
+        if (isCreator) {
           setIsHost(true);
+          console.log('Set as host (creator)');
         }
-        
       } catch (error) {
         console.error('Failed to join room:', error);
-        setStatus('Failed to join room');
-      } finally {
-        joinPromise.current = null;
+        setStatus('Failed to connect');
       }
     };
-    
-    joinPromise.current = joinRoom();
-    
-    return () => {
-      console.log('Cleaning up room connection');
-      hasJoined.current = false;
-      joinPromise.current = null;
-      multiplayerManager.leaveRoom();
-    };
-  }, [code, self.id, self.name, isCreator]);
 
+    joinPromise.current = joinRoom();
+  }, [code, self, isCreator]);
+
+  // Set up multiplayer event listeners
   useEffect(() => {
-    const onElim = (playerId: string) => {
-      if (playerId === self.id) {
+    const handlePlayersUpdate = (updatedPlayers: any[]) => {
+      setPlayers(updatedPlayers);
+    };
+
+    const handleGameStateChange = (newState: any) => {
+      if (newState.gameState) setGameState(newState.gameState);
+      if (newState.lightState) setLightState(newState.lightState);
+      if (newState.timeLeft !== undefined) setTimeLeft(newState.timeLeft);
+      if (newState.winners) setWinners(newState.winners);
+      if (newState.ended !== undefined) setEnded(newState.ended);
+    };
+
+    const handlePlayerEliminated = (payload: any) => {
+      if (payload.playerId === self.id) {
         setSelfElim(true);
-        multiplayerManager.setSelfPresence({ isEliminated: true, isMoving: false });
       }
     };
-    multiplayerManager.onEvent('PLAYER_ELIMINATED', onElim);
-    return () => multiplayerManager.offEvent('PLAYER_ELIMINATED', onElim);
+
+    const handleHostChange = (hostId: string) => {
+      const isNowHost = hostId === self.id;
+      setIsHost(isNowHost);
+      console.log('Host changed:', hostId, 'Am I host?', isNowHost);
+    };
+
+    multiplayerManager.onEvent('PLAYERS_UPDATED', handlePlayersUpdate);
+    multiplayerManager.onEvent('GAME_STATE_CHANGED', handleGameStateChange);
+    multiplayerManager.onEvent('PLAYER_ELIMINATED', handlePlayerEliminated);
+    multiplayerManager.onEvent('HOST_CHANGED', handleHostChange);
+
+    return () => {
+      multiplayerManager.offEvent('PLAYERS_UPDATED', handlePlayersUpdate);
+      multiplayerManager.offEvent('GAME_STATE_CHANGED', handleGameStateChange);
+      multiplayerManager.offEvent('PLAYER_ELIMINATED', handlePlayerEliminated);
+      multiplayerManager.offEvent('HOST_CHANGED', handleHostChange);
+    };
   }, [self.id]);
 
-  useEffect(() => {
-    if (timeLeft <= 0 && !selfElim && !selfWon) {
-      setSelfElim(true);
-      multiplayerManager.setSelfPresence({ isEliminated: true, isMoving: false });
-    }
-  }, [timeLeft, selfElim, selfWon]);
+  // Game logic for Red Light Green Light
+  const handleStartGame = () => {
+    if (!isHost) return;
+    
+    console.log('Starting Red Light Green Light game');
+    startHostLoop(); // Use the host loop instead of manual state management
+  };
 
-  // Listen for game reset events
-  useEffect(() => {
-    const onGameReset = () => {
-      console.log('Game reset received, resetting local state');
-      // Reset all local state
-      setSelfElim(false);
-      setSelfWon(false);
-      setEnded(false);
-      setWinners([]);
-      setGameState('waiting');
-      setLightState('green');
-      setTimeLeft(50);
-      setIsPlayerMoving(false); // Reset movement state to stop running in place
-      setPlayerPosition(0); // Reset player position for progress bar
-      setHostLoopKey(prev => prev + 1); // Force host loop remount
-      resetHostLoop(); // Manually reset host loop
-      // Reset player position
-      if (playerRef.current) {
-        playerRef.current.position.set(0, 0, -5);
-        playerRef.current.rotation.y = 0;
-      }
-      // Reset presence
-      multiplayerManager.setSelfPresence({ isEliminated: false, isMoving: false });
-    };
-
-    multiplayerManager.onEvent('GAME_RESET', onGameReset);
-    return () => multiplayerManager.offEvent('GAME_RESET', onGameReset);
-  }, []);
-
-  const handleLeave = async () => {
-    await multiplayerManager.leaveRoom();
+  const handleLeave = () => {
+    multiplayerManager.leaveRoom();
     navigate('/lobby');
   };
 
-  const handleStartGame = () => {
-    console.log('Start game clicked!', { isHost, gameState, startGame: !!startGame, hostLoopKey });
-    if (isHost) {
-      console.log('Calling startGame function');
-      startGame();
-    } else {
-      console.log('Not host, cannot start game');
-    }
+  const handleGameTypeChange = (newGameType: GameType) => {
+    setGameType(newGameType);
+    multiplayerManager.setRoomMetadata({ gameType: newGameType });
   };
 
-  return (
-    <div className="w-full h-screen relative">
+  // Render Red Light Green Light game
+  const renderRedLightGreenLight = () => (
+    <div className="w-full h-screen relative bg-gradient-to-b from-blue-400 to-blue-600">
       <div className="absolute top-3 left-3 z-10 flex gap-3">
         {isHost && (
           <button className="px-3 py-1 rounded bg-yellow-500 text-white" disabled>
@@ -638,11 +453,44 @@ const RoomGame = () => {
           Leave Game
         </button>
         <Link to="/" className="px-3 py-1 rounded bg-white/80">Single Player</Link>
+        
+        {/* Mute Button */}
+        <button 
+          className={`px-3 py-1 rounded text-white hover:opacity-80 transition-opacity ${
+            isMuted ? 'bg-red-600' : 'bg-green-600'
+          }`}
+          onClick={toggleMute}
+          title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+        >
+          {isMuted ? '🔇' : '🔊'}
+        </button>
+        
         <span className="px-3 py-1 rounded bg-white/60 text-sm">
           {gameState} • {lightState} • {Math.ceil(timeLeft)}s • Players: {players.length} • Host: {isHost ? 'Yes' : 'No'} • Camera: {cameraMode}
         </span>
       </div>
 
+      {/* Game Type Selector */}
+      <div className="absolute top-3 right-3 z-10 flex gap-2">
+        <button
+          className={`px-3 py-1 rounded text-white ${
+            gameType === 'red-light-green-light' ? 'bg-blue-600' : 'bg-gray-600'
+          }`}
+          onClick={() => handleGameTypeChange('red-light-green-light')}
+        >
+          🚦 Red Light Green Light
+        </button>
+        <button
+          className={`px-3 py-1 rounded text-white ${
+            gameType === 'tug-of-war' ? 'bg-orange-600' : 'bg-gray-600'
+          }`}
+          onClick={() => handleGameTypeChange('tug-of-war')}
+        >
+          🪢 Tug of War
+        </button>
+      </div>
+
+      {/* Game Over Screen */}
       {ended && (
         <div className="absolute inset-x-0 top-14 z-10 mx-auto max-w-md bg-white/90 rounded p-4 text-center">
           <div className="text-lg font-semibold mb-2">Game Over</div>
@@ -654,6 +502,7 @@ const RoomGame = () => {
         </div>
       )}
 
+      {/* Waiting for Host Screen */}
       {gameState === 'waiting' && !isHost && (
         <div className="absolute inset-x-0 top-14 z-10 mx-auto max-w-md bg-white/90 rounded p-4 text-center">
           <div className="text-lg font-semibold mb-2">Waiting for Host</div>
@@ -661,6 +510,7 @@ const RoomGame = () => {
         </div>
       )}
 
+      {/* Countdown Screen */}
       {gameState === 'countdown' && (
         <div className="absolute inset-x-0 top-14 z-10 mx-auto max-w-md bg-white/90 rounded p-4 text-center">
           <div className="text-lg font-semibold mb-2">Game Starting Soon!</div>
@@ -668,7 +518,7 @@ const RoomGame = () => {
         </div>
       )}
 
-      {/* Progress bar - same as single player */}
+      {/* Progress bar */}
       {gameState === 'playing' && (
         <div className="absolute bottom-8 left-8 right-8 pointer-events-auto">
           <div className="bg-black/50 p-4 rounded-lg">
@@ -690,7 +540,7 @@ const RoomGame = () => {
         </div>
       )}
 
-      {/* Game in Progress section */}
+      {/* Game Status */}
       {gameState === 'playing' && (
         <div className="absolute top-4 right-4 z-10 bg-black/90 rounded p-3 text-center">
           <div className="text-lg font-semibold text-green-400 mb-1">Game in Progress!</div>
@@ -700,6 +550,7 @@ const RoomGame = () => {
         </div>
       )}
 
+      {/* 3D Game Canvas */}
       <Canvas
         shadows
         camera={{ 
@@ -711,85 +562,171 @@ const RoomGame = () => {
       >
         {/* Camera rig; press Space to cycle modes */}
         <FollowCamera targetRef={playerRef} cameraMode={cameraMode} />
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[5, 10, -5]} intensity={0.8} castShadow />
+        
+        {/* Lighting */}
+        <ambientLight intensity={0.4} />
+        <directionalLight
+          position={[10, 10, 5]}
+          intensity={1}
+          castShadow
+          shadow-mapSize-width={2048}
+          shadow-mapSize-height={2048}
+        />
+        
+        {/* Environment */}
         <Environment />
-
-        <Player
-          lightState={lightState}
-          gameState={ended ? (winners.includes(self.id!) ? 'won' : 'eliminated') : (selfElim ? 'eliminated' : (selfWon ? 'won' : 'playing'))}
-          onElimination={() => {
-            setSelfElim(true);
-            multiplayerManager.setSelfPresence({ isEliminated: true, isMoving: false });
-          }}
-          onPositionUpdate={(position) => {
-            console.log('Position update received:', position, 'Progress:', position / FIELD_CONFIG.FIELD_LENGTH_UNITS);
-            setPlayerPosition(position);
-          }}
-          modelPath={MODEL_CONFIG.player.path}
-          onRefReady={(ref) => { (playerRef as any).current = ref.current; }}
-          canMove={gameState === 'playing'} // Only allow movement when game is playing
-          resetKey={hostLoopKey} // Pass reset key to Player component
-        />
-
-        <PositionReporter 
-          groupRef={playerRef} 
-          light={lightState} 
-          onSelfEliminate={() => setSelfElim(true)}
-          onMovementChange={setIsPlayerMoving}
-        />
+        
+        {/* Doll */}
         <Doll lightState={lightState} gameState={gameState} modelPath={MODEL_CONFIG.doll.path} />
+        
+        {/* Soldiers */}
         {FIELD_CONFIG.SOLDIER_POSITIONS.map((position, index) => (
           <Soldier key={index} position={position} rotation={[0, Math.PI, 0]} />
         ))}
+        
+         {/* Player */}
+         <Player
+           lightState={lightState}
+           gameState={ended ? (winners.includes(self.id!) ? 'won' : 'eliminated') : (selfElim ? 'eliminated' : (selfWon ? 'won' : 'playing'))}
+           onElimination={() => {
+             setSelfElim(true);
+             multiplayerManager.setSelfPresence({ isEliminated: true, isMoving: false });
+           }}
+           onPositionUpdate={(position) => {
+             setPlayerPosition(position);
+           }}
+           modelPath={MODEL_CONFIG.player.path}
+           onRefReady={(ref) => { (playerRef as any).current = ref.current; }}
+           canMove={gameState === 'playing'}
+           resetKey={hostLoopKey}
+           onMovementChange={setIsPlayerMoving}
+         />
 
+        {/* Position Reporter */}
+        <PositionReporter
+          groupRef={playerRef}
+          light={lightState}
+          onSelfEliminate={() => setSelfElim(true)}
+          onMovementChange={setIsPlayerMoving}
+        />
+
+        {/* Remote Players */}
         <RemotePlayers players={players} selfId={self.id!} />
+
+        {/* Win Checker */}
         <WinChecker playerRef={playerRef} onWin={() => setSelfWon(true)} />
         
-        {/* Celebration effects for winner */}
-        <Celebration gameState={selfWon ? 'won' : 'playing'} />
+        {/* Celebration effect */}
+        {(selfWon) && (
+          <Celebration gameState="won" />
+        )}
+        
+        {/* Controls */}
+        <OrbitControls
+          enablePan={false}
+          enableZoom={true}
+          enableRotate={true}
+          minPolarAngle={Math.PI / 6}
+          maxPolarAngle={Math.PI / 2}
+          minDistance={5}
+          maxDistance={15}
+        />
       </Canvas>
 
-      {ended && isHost && (
-        <button
-          className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded bg-white/80"
-          onClick={() => {
-            console.log('Reset button clicked!');
-            console.log('Before reset - isHost:', isHost, 'gameState:', gameState, 'hostLoopKey:', hostLoopKey);
-            // host resets game - use broadcastGameReset instead of broadcastReset
-            multiplayerManager.broadcastGameReset(50);
-            // local clear
-            setSelfElim(false);
-            setSelfWon(false);
-            setEnded(false);
-            setWinners([]);
-            setGameState('waiting'); // Add this to ensure start button appears
-            setLightState('green');  // Add this to ensure light resets
-            setTimeLeft(50);         // Add this to ensure timer resets
-            setIsPlayerMoving(false); // Reset movement state to stop running in place
-            setPlayerPosition(0); // Reset player position for progress bar
-            setHostLoopKey(prev => {
-              const newKey = prev + 1;
-              console.log('Incrementing hostLoopKey from', prev, 'to', newKey);
-              return newKey;
-            }); // Force host loop remount
-            resetHostLoop(); // Manually reset host loop
-            // Reset player position
-            if (playerRef.current) {
-              playerRef.current.position.set(0, 0, -5);
-              playerRef.current.rotation.y = 0;
-            }
-            multiplayerManager.setSelfPresence({ isEliminated: false, isMoving: false });
-            console.log('Reset complete - gameState should be waiting, start button should appear');
-          }}
-        >
-          Reset
-        </button>
-      )}
+      {/* Camera Controls */}
+      <div className="absolute bottom-4 left-4 z-10 flex gap-2">
+        {(['follow', 'closeup', 'drone', 'firstPerson'] as CameraMode[]).map((mode) => (
+          <button
+            key={mode}
+            className={`px-3 py-1 rounded text-sm ${
+              cameraMode === mode ? 'bg-blue-600 text-white' : 'bg-white/80 text-gray-800'
+            }`}
+            onClick={() => setCameraMode(mode)}
+          >
+            {mode.charAt(0).toUpperCase() + mode.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* Instructions */}
+      <div className="absolute bottom-4 right-4 text-white bg-black/50 p-3 rounded-lg">
+        <div className="text-sm font-semibold mb-2">Controls:</div>
+        <div className="text-xs space-y-1">
+          <div>Use <kbd className="bg-gray-700 px-1 rounded">WASD</kbd> or <kbd className="bg-gray-700 px-1 rounded">Arrow Keys</kbd> to move</div>
+          <div>Move only on <span className="text-green-400">Green Light</span></div>
+          <div>Stop on <span className="text-red-400">Red Light</span></div>
+        </div>
+      </div>
     </div>
   );
-};
 
-export default RoomGame;
+  // Render Tug of War game
+  const renderTugOfWar = () => (
+    <div className="w-full h-screen relative">
+      <div className="absolute top-3 left-3 z-10 flex gap-3">
+        <button 
+          className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600" 
+          onClick={handleLeave}
+        >
+          Leave Game
+        </button>
+        <Link to="/" className="px-3 py-1 rounded bg-white/80">Single Player</Link>
+        
+        {/* Mute Button */}
+        <button 
+          className={`px-3 py-1 rounded text-white hover:opacity-80 transition-opacity ${
+            isMuted ? 'bg-red-600' : 'bg-green-600'
+          }`}
+          onClick={toggleMute}
+          title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+        >
+          {isMuted ? '🔇' : '🔊'}
+        </button>
+        
+        <span className="px-3 py-1 rounded bg-white/60 text-sm">
+          Players: {players.length} • Host: {isHost ? 'Yes' : 'No'}
+        </span>
+      </div>
 
+      {/* Game Type Selector */}
+      <div className="absolute top-3 right-3 z-10 flex gap-2">
+        <button
+          className={`px-3 py-1 rounded text-white ${
+            gameType === 'red-light-green-light' ? 'bg-blue-600' : 'bg-gray-600'
+          }`}
+          onClick={() => handleGameTypeChange('red-light-green-light')}
+        >
+          🚦 Red Light Green Light
+        </button>
+        <button
+          className={`px-3 py-1 rounded text-white ${
+            gameType === 'tug-of-war' ? 'bg-orange-600' : 'bg-gray-600'
+          }`}
+          onClick={() => handleGameTypeChange('tug-of-war')}
+        >
+          🪢 Tug of War
+        </button>
+      </div>
 
+      <MultiplayerTugOfWar />
+    </div>
+  );
+
+  if (status !== 'Connected') {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-gray-900 text-white">
+        <div className="text-center">
+          <div className="text-2xl font-bold mb-4">{status}</div>
+          <div className="text-sm text-gray-400">Room Code: {code}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {gameType === 'red-light-green-light' && renderRedLightGreenLight()}
+      {gameType === 'tug-of-war' && renderTugOfWar()}
+    </>
+  );
+}

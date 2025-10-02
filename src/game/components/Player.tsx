@@ -1,4 +1,4 @@
-import { useRef, useEffect, Suspense, useState, useMemo } from 'react';
+import { useRef, useEffect, Suspense, useState, useMemo, forwardRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
@@ -175,7 +175,7 @@ const GLBPlayer = ({ modelPath, state }: { modelPath: string; state: string }) =
   );
 };
 
-export const Player = ({ 
+export const Player = forwardRef<THREE.Group, PlayerProps>(({ 
   lightState, 
   gameState, 
   onElimination, 
@@ -185,7 +185,7 @@ export const Player = ({
   onMovementChange, // Add this prop
   canMove = true, // Add this prop with default value
   resetKey = 0 // Add reset key prop
-}: PlayerProps) => {
+}, ref) => {
   const eliminationAnimation = useRef(false);
   const [usePrimitive, setUsePrimitive] = useState(!modelPath);
   
@@ -314,7 +314,7 @@ export const Player = ({
   }, [gameState]);
 
   return (
-    <group ref={playerGroupRef} position={[0, 0, -5]}>
+    <group ref={ref || playerGroupRef} position={[0, 0, -5]}>
       <group ref={offsetRef} position={[0, 0, 0]}>
         <group ref={fallRef} position={[0, 0, 0]}>
           <Suspense fallback={<PlayerLoading />}>
@@ -331,5 +331,5 @@ export const Player = ({
       </group>
     </group>
   );
-};
+});
  

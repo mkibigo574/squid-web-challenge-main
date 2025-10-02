@@ -8,19 +8,28 @@ type EventType =
   | 'PLAYERS_UPDATED'
   | 'PLAYER_ELIMINATED'
   | 'HOST_CHANGED'
-  | 'GAME_RESET';
+  | 'GAME_RESET'
+  // Tug of War specific events
+  | 'ROPE_POSITION_CHANGED'
+  | 'PLAYER_PULLING'
+  | 'PLAYER_RELEASED'
+  | 'TUG_OF_WAR_GAME_STARTED'
+  | 'TUG_OF_WAR_GAME_ENDED'
+  | 'TUG_OF_WAR_TIME_UPDATE'
+  | 'TUG_OF_WAR_COUNTDOWN_UPDATE';
 
 type RoomMetadata = {
   hostId?: string;
   createdAt?: number;
   isCreator?: boolean;
+  gameType?: 'red-light-green-light' | 'tug-of-war';
 };
 
 class MultiplayerManager {
   private channel?: ReturnType<typeof supabase.channel>;
   private listeners = new Map<EventType, Set<Listener>>();
   private roomCode?: string;
-  private selfId = crypto.randomUUID();
+  private selfId: string = crypto.randomUUID();
   private roomMetadata?: RoomMetadata;
   private selfPresence?: {
     id: string;
@@ -29,6 +38,10 @@ class MultiplayerManager {
     x: number;
     z: number;
     isMoving: boolean;
+    // Tug of War specific properties
+    isPulling?: boolean;
+    pullStrength?: number;
+    position?: number;
     ts?: number;
   };
   private playersList: any[] = [];
@@ -50,64 +63,41 @@ class MultiplayerManager {
     this.listeners.get(type)?.forEach((cb) => cb(payload));
   }
 
-  // Broadcast-based player management
-  private broadcastPlayerList() {
-    if (!this.channel || this.isUpdating) return;
-    
-    this.isUpdating = true;
-    this.channel.send({
-      type: 'broadcast',
-      event: 'player_list_update',
-      payload: { players: this.playersList, senderId: this.selfId }
-    });
-    
-    // Reset flag after a short delay
-    setTimeout(() => {
-      this.isUpdating = false;
-    }, 100);
-  }
-
-  private addPlayer(player: any) {
-    const existingIndex = this.playersList.findIndex(p => p.id === player.id);
-    if (existingIndex >= 0) {
-      this.playersList[existingIndex] = { ...this.playersList[existingIndex], ...player };
-    } else {
-      this.playersList.push(player);
-      console.log('Added player to list:', player.name || player.id, 'Total players:', this.playersList.length);
-    }
-    this.emit('PLAYERS_UPDATED', [...this.playersList]);
-    this.broadcastPlayerList();
-  }
-
-  private removePlayer(playerId: string) {
-    this.playersList = this.playersList.filter(p => p.id !== playerId);
-    console.log('Removed player from list:', playerId, 'Total players:', this.playersList.length);
-    this.emit('PLAYERS_UPDATED', [...this.playersList]);
-    this.broadcastPlayerList();
-  }
-
   async joinRoom(roomCode: string, player: { id: string; name?: string }, isCreator = false) {
-    // If already connected to the same room, just increment connection count
-    if (this.channel && this.roomCode === roomCode && this.isSubscribed) {
-      this.connectionCount++;
+    // Reuse existing connection if available
+    if (this.channel && this.roomCode === roomCode) {
       console.log('Reusing existing connection, count:', this.connectionCount);
+      this.connectionCount++;
       return;
     }
 
-    // If connected to a different room, leave it first
-    if (this.channel && this.roomCode !== roomCode) {
+    // Clean up existing connection
+    if (this.channel) {
       await this.leaveRoom();
-    }
-
-    // If channel exists but is closed, clean it up
-    if (this.channel && !this.isSubscribed) {
-      this.channel = undefined;
-      this.roomCode = undefined;
     }
 
     this.roomCode = roomCode;
     this.selfId = player.id;
     this.connectionCount = 1;
+
+    // Check if Supabase is available
+    if (!supabase) {
+      console.warn('Supabase not configured, running in offline mode');
+      this.isSubscribed = false;
+      this.selfPresence = {
+        id: player.id,
+        name: player.name ?? 'Player',
+        isEliminated: false,
+        x: 0,
+        z: 0,
+        isMoving: false,
+        isPulling: false,
+        pullStrength: 0,
+        position: 0
+      };
+      this.addPlayer(this.selfPresence);
+      return;
+    }
 
     this.channel = supabase.channel(`room:${roomCode}`, {
       config: {
@@ -116,91 +106,124 @@ class MultiplayerManager {
       }
     });
 
-    // Set up event listeners
-    this.channel
-      .on('broadcast', { event: 'game_state' }, ({ payload }) => {
-        this.emit('GAME_STATE_CHANGED', payload);
-      })
-      .on('broadcast', { event: 'room' }, ({ payload }) => {
-        this.roomMetadata = payload;
-        this.emit('ROOM_UPDATED', payload);
-      })
-      .on('broadcast', { event: 'host_change' }, ({ payload }) => {
-        this.roomMetadata = { ...this.roomMetadata, hostId: payload.hostId };
-        this.emit('HOST_CHANGED', payload);
-      })
-      .on('broadcast', { event: 'eliminate' }, ({ payload }) => {
-        this.emit('PLAYER_ELIMINATED', payload.playerId);
-      })
-      .on('broadcast', { event: 'player_join' }, ({ payload }) => {
-        console.log('Player join broadcast received:', payload);
-        // Add player immediately without delay
-        this.addPlayer(payload);
-      })
-      .on('broadcast', { event: 'player_leave' }, ({ payload }) => {
-        console.log('Player leave broadcast received:', payload);
-        this.removePlayer(payload.playerId);
-      })
-      .on('broadcast', { event: 'player_list_update' }, ({ payload }) => {
-        // Only update if we're not the one who sent it
-        if (payload.senderId !== this.selfId) {
-          console.log('Player list update received from:', payload.senderId, 'Players:', payload.players.length);
-          // Merge the received list with our current list to avoid losing players
-          const receivedPlayers = payload.players || [];
-          const currentPlayerIds = new Set(this.playersList.map(p => p.id));
-          
-          // Add any new players from the received list
-          receivedPlayers.forEach((player: any) => {
-            if (!currentPlayerIds.has(player.id)) {
-              this.playersList.push(player);
-              console.log('Added missing player from update:', player.name || player.id);
-            }
-          });
-          
-          // Update existing players with newer data
-          receivedPlayers.forEach((player: any) => {
-            const existingIndex = this.playersList.findIndex(p => p.id === player.id);
-            if (existingIndex >= 0) {
-              this.playersList[existingIndex] = { ...this.playersList[existingIndex], ...player };
-            }
-          });
-          
-          console.log('Final player count after merge:', this.playersList.length);
-          this.emit('PLAYERS_UPDATED', [...this.playersList]);
-        }
-      })
-      .on('broadcast', { event: 'request_player_list' }, ({ payload }) => {
-        // Only respond if we're not the requester
-        if (payload.requesterId !== this.selfId) {
-          this.broadcastPlayerList();
-        }
-      })
-      .on('broadcast', { event: 'game_reset' }, ({ payload }) => {
-        this.emit('GAME_RESET', payload);
-      });
+    // Listen for presence changes
+    this.channel.on('presence', { event: 'sync' }, () => {
+      const state = this.channel!.presenceState();
+      const players = Object.values(state).flat() as any[];
+      this.playersList = players;
+      this.emit('PLAYERS_UPDATED', players);
+    });
+
+    // Listen for broadcast events
+    this.channel.on('broadcast', { event: 'player_join' }, (payload) => {
+      console.log('Player join broadcast received:', payload.payload);
+      this.addPlayer(payload.payload);
+    });
+
+    this.channel.on('broadcast', { event: 'player_leave' }, (payload) => {
+      console.log('Player leave broadcast received:', payload.payload);
+      this.removePlayer(payload.payload.id);
+    });
+
+    this.channel.on('broadcast', { event: 'request_player_list' }, (payload) => {
+      if (payload.payload.requesterId !== this.selfId) {
+        // Send current player list to requester
+        this.channel!.send({
+          type: 'broadcast',
+          event: 'player_list_response',
+          payload: { players: this.playersList, requesterId: payload.payload.requesterId }
+        });
+      }
+    });
+
+    this.channel.on('broadcast', { event: 'player_list_response' }, (payload) => {
+      if (payload.payload.requesterId === this.selfId) {
+        console.log('Received player list response:', payload.payload.players);
+        this.playersList = payload.payload.players;
+        this.emit('PLAYERS_UPDATED', payload.payload.players);
+      }
+    });
+
+    // Game state events
+    this.channel.on('broadcast', { event: 'game_state_changed' }, (payload) => {
+      console.log('Game state changed:', payload.payload);
+      this.emit('GAME_STATE_CHANGED', payload.payload);
+    });
+
+    this.channel.on('broadcast', { event: 'player_eliminated' }, (payload) => {
+      console.log('Player eliminated:', payload.payload);
+      this.emit('PLAYER_ELIMINATED', payload.payload);
+    });
+
+    this.channel.on('broadcast', { event: 'host_changed' }, (payload) => {
+      console.log('Host changed:', payload.payload);
+      this.emit('HOST_CHANGED', payload.payload.hostId);
+    });
+
+    this.channel.on('broadcast', { event: 'game_reset' }, (payload) => {
+      console.log('Game reset:', payload.payload);
+      this.emit('GAME_RESET', payload.payload);
+    });
+
+    // Tug of War specific events
+    this.channel.on('broadcast', { event: 'rope_position_changed' }, (payload) => {
+      console.log('Rope position changed:', payload.payload);
+      this.emit('ROPE_POSITION_CHANGED', payload.payload);
+    });
+
+    this.channel.on('broadcast', { event: 'player_pulling' }, (payload) => {
+      console.log('Player pulling:', payload.payload);
+      this.emit('PLAYER_PULLING', payload.payload);
+    });
+
+    this.channel.on('broadcast', { event: 'player_released' }, (payload) => {
+      console.log('Player released:', payload.payload);
+      this.emit('PLAYER_RELEASED', payload.payload);
+    });
+
+    this.channel.on('broadcast', { event: 'tug_of_war_game_started' }, (payload) => {
+      console.log('Tug of War game started:', payload.payload);
+      this.emit('TUG_OF_WAR_GAME_STARTED', payload.payload);
+    });
+
+    this.channel.on('broadcast', { event: 'tug_of_war_game_ended' }, (payload) => {
+      console.log('Tug of War game ended:', payload.payload);
+      this.emit('TUG_OF_WAR_GAME_ENDED', payload.payload);
+    });
+
+    this.channel.on('broadcast', { event: 'tug_of_war_time_update' }, (payload) => {
+      this.emit('TUG_OF_WAR_TIME_UPDATE', payload.payload);
+    });
+
+    this.channel.on('broadcast', { event: 'tug_of_war_countdown_update' }, (payload) => {
+      this.emit('TUG_OF_WAR_COUNTDOWN_UPDATE', payload.payload);
+    });
 
     return new Promise<void>((resolve) => {
       this.channel!.subscribe(async (status) => {
         console.log('Channel subscription status:', status);
         if (status === 'SUBSCRIBED') {
           this.isSubscribed = true;
-          
+
           this.selfPresence = {
             id: player.id,
             name: player.name ?? 'Player',
             isEliminated: false,
             x: 0,
             z: 0,
-            isMoving: false
+            isMoving: false,
+            isPulling: false,
+            pullStrength: 0,
+            position: 0
           };
-          
+
           if (this.channel) {
             await this.channel.track(this.selfPresence);
             console.log('Self presence tracked:', this.selfPresence);
-            
+
             // Add self to player list immediately
             this.addPlayer(this.selfPresence);
-            
+
             // Wait a bit before broadcasting join to ensure we're fully connected
             setTimeout(async () => {
               // Broadcast that we joined
@@ -209,7 +232,7 @@ class MultiplayerManager {
                 event: 'player_join',
                 payload: this.selfPresence
               });
-              
+
               // Request current player list from others
               await this.channel!.send({
                 type: 'broadcast',
@@ -218,191 +241,129 @@ class MultiplayerManager {
               });
             }, 200);
           }
-          
-          // If this is the creator, set them as host immediately
-          if (isCreator) {
-            console.log('Setting creator as host:', player.id);
-            this.roomMetadata = {
-              hostId: player.id,
-              createdAt: Date.now(),
-              isCreator: true
-            };
-            this.emit('HOST_CHANGED', { hostId: player.id });
-            this.emit('ROOM_UPDATED', this.roomMetadata);
-            await this.setHost(player.id);
-          }
-          
-          // Set up periodic player list requests as backup
-          this.playersUpdateInterval = window.setInterval(() => {
-            if (this.channel) {
-              this.channel.send({
-                type: 'broadcast',
-                event: 'request_player_list',
-                payload: { requesterId: player.id }
-              });
-            }
-          }, 10000);
-          
           resolve();
         } else if (status === 'CLOSED') {
           console.log('Channel closed, cleaning up');
           this.isSubscribed = false;
           this.channel = undefined;
           this.roomCode = undefined;
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('Supabase connection failed, running in offline mode');
+          // Continue in offline mode
+          this.isSubscribed = false;
+          resolve();
         }
       });
     });
   }
 
   async leaveRoom() {
-    this.connectionCount--;
-    console.log('Leave room called, connection count:', this.connectionCount);
-    
-    // Only actually leave if no components are using the connection
-    if (this.connectionCount > 0) {
-      console.log('Other components still using connection, not leaving');
-      return;
+    if (this.channel) {
+      this.connectionCount--;
+      if (this.connectionCount <= 0) {
+        console.log('Leave room called, connection count:', this.connectionCount);
+        await this.channel.untrack();
+        await this.channel.unsubscribe();
+        this.channel = undefined;
+        this.roomCode = undefined;
+        this.isSubscribed = false;
+        this.playersList = [];
+        this.selfPresence = undefined;
+      } else {
+        console.log('Other components still using connection, not leaving');
+      }
     }
-    
-    console.log('Leaving room - no more connections');
-    this.isSubscribed = false;
-    
-    if (this.playersUpdateInterval) {
-      clearInterval(this.playersUpdateInterval);
-      this.playersUpdateInterval = undefined;
+  }
+
+  private addPlayer(player: any) {
+    const existingIndex = this.playersList.findIndex(p => p.id === player.id);
+    if (existingIndex >= 0) {
+      this.playersList[existingIndex] = { ...this.playersList[existingIndex], ...player };
+    } else {
+      this.playersList.push(player);
     }
-    
-    // Broadcast that we're leaving
-    if (this.channel && this.selfId) {
-      await this.channel.send({
+    console.log('Added player to list:', player.name || player.id, 'Total players:', this.playersList.length);
+    this.emit('PLAYERS_UPDATED', [...this.playersList]);
+  }
+
+  private removePlayer(playerId: string) {
+    this.playersList = this.playersList.filter(p => p.id !== playerId);
+    console.log('Removed player:', playerId, 'Total players:', this.playersList.length);
+    this.emit('PLAYERS_UPDATED', [...this.playersList]);
+  }
+
+  updatePresence(presence: Partial<typeof this.selfPresence>) {
+    if (this.selfPresence) {
+      this.selfPresence = { ...this.selfPresence, ...presence };
+      if (this.channel && this.isSubscribed) {
+        this.channel.track(this.selfPresence);
+      }
+    }
+  }
+
+  broadcast(event: string, payload: any) {
+    if (this.channel && this.isSubscribed) {
+      this.channel.send({
         type: 'broadcast',
-        event: 'player_leave',
-        payload: { playerId: this.selfId }
+        event,
+        payload
       });
     }
-    
-    await this.channel?.unsubscribe();
-    this.channel = undefined;
-    this.roomMetadata = undefined;
-    this.playersList = [];
-  }
-
-  async setHost(hostId: string) {
-    if (!this.channel) return;
-    
-    console.log('Setting host to:', hostId);
-    this.roomMetadata = {
-      ...this.roomMetadata,
-      hostId,
-      createdAt: this.roomMetadata?.createdAt || Date.now()
-    };
-    
-    await this.channel.send({
-      type: 'broadcast',
-      event: 'host_change',
-      payload: { hostId }
-    });
-    
-    await this.channel.send({
-      type: 'broadcast',
-      event: 'room',
-      payload: this.roomMetadata
-    });
-  }
-
-  isHost(): boolean {
-    const isHost = this.roomMetadata?.hostId === this.selfId;
-    return isHost;
-  }
-
-  getRoomMetadata(): RoomMetadata | undefined {
-    return this.roomMetadata;
-  }
-
-  updatePlayerPosition(position: { x: number; z: number }, isMoving: boolean, immediate = false) {
-    if (!this.channel || !this.selfPresence) return;
-    this.selfPresence = { ...this.selfPresence, x: position.x, z: position.z, isMoving, ts: Date.now() as any };
-    
-    // Update our entry in the player list
-    this.addPlayer(this.selfPresence);
-    
-    return this.channel.track(this.selfPresence);
   }
 
   broadcastGameState(gameState: string, lightState: 'green' | 'red', timeLeft: number) {
-    return this.channel?.send({
-      type: 'broadcast',
-      event: 'game_state',
-      payload: { gameState, lightState, timeLeft }
+    this.broadcast('game_state_changed', {
+      gameState,
+      lightState,
+      timeLeft
     });
-  }
-
-  eliminatePlayer(playerId: string) {
-    return this.channel?.send({
-      type: 'broadcast',
-      event: 'eliminate',
-      payload: { playerId }
-    });
-  }
-
-  setSelfPresence(fields: Partial<{ isEliminated: boolean; x: number; z: number; isMoving: boolean }>) {
-    if (!this.channel || !this.selfPresence) return;
-    this.selfPresence = { ...this.selfPresence, ...fields };
-    
-    // Update our entry in the player list
-    this.addPlayer(this.selfPresence);
-    
-    return this.channel.track(this.selfPresence);
-  }
-
-  getPlayersList() {
-    return [...this.playersList];
   }
 
   broadcastFinal(winners: string[]) {
-    return this.channel?.send({
-      type: 'broadcast',
-      event: 'game_state',
-      payload: { gameState: 'ended', lightState: 'red', timeLeft: 0, winners }
+    this.broadcast('game_state_changed', {
+      gameState: 'ended',
+      winners,
+      ended: true
     });
   }
 
-  broadcastReset(initialTime = 50) {
-    return this.channel?.send({
-      type: 'broadcast',
-      event: 'game_state',
-      payload: { gameState: 'countdown', lightState: 'green', timeLeft: initialTime, winners: [] }
+  broadcastGameReset(timeLeft: number) {
+    this.broadcast('game_reset', {
+      timeLeft,
+      gameState: 'waiting'
     });
   }
 
-  // New comprehensive reset function
-  broadcastGameReset(initialTime = 50) {
-    // Reset all players to starting position
-    if (this.selfPresence) {
-      this.selfPresence = {
-        ...this.selfPresence,
-        isEliminated: false,
-        x: 0,
-        z: -5, // Starting line position
-        isMoving: false
-      };
-      this.addPlayer(this.selfPresence);
-    }
+  setSelfPresence(presence: Partial<typeof this.selfPresence>) {
+    this.updatePresence(presence);
+  }
 
-    // Broadcast reset event to all players
-    this.channel?.send({
-      type: 'broadcast',
-      event: 'game_reset',
-      payload: { 
-        gameState: 'waiting', 
-        lightState: 'green', 
-        timeLeft: initialTime,
-        resetPlayers: true
-      }
-    });
+  getPlayersList() {
+    return this.getPlayers();
+  }
 
-    // Also broadcast the game state reset
-    return this.broadcastReset(initialTime);
+  getPlayers() {
+    return [...this.playersList];
+  }
+
+  getSelfId() {
+    return this.selfId;
+  }
+
+  isConnected() {
+    return this.isSubscribed;
+  }
+
+  getRoomCode() {
+    return this.roomCode;
+  }
+
+  setRoomMetadata(metadata: Partial<RoomMetadata>) {
+    this.roomMetadata = { ...this.roomMetadata, ...metadata };
+  }
+
+  getRoomMetadata() {
+    return this.roomMetadata;
   }
 }
 

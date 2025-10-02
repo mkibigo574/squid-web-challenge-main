@@ -63,25 +63,36 @@ export const preloadModelWithFallback = async (supabaseUrl: string, localPath: s
     return;
   }
 
-  try {
-    // First, try to preload from Supabase
-    await preloadModel(supabaseUrl);
-    loadedModels.add(supabaseUrl);
-    resolvedPaths.set(localPath, supabaseUrl); // Map local path to Supabase URL
-    console.log(`✅ Model loaded from Supabase: ${modelName}`);
-  } catch (error) {
-    console.warn(`❌ Failed to load from Supabase: ${modelName}`, error);
-    
-    // Fallback to local file
+  // Check if Supabase URL is valid before trying to load
+  const isSupabaseUrlValid = supabaseUrl && 
+    !supabaseUrl.includes('undefined') && 
+    !supabaseUrl.includes('your-supabase-url') &&
+    supabaseUrl.startsWith('http');
+
+  if (isSupabaseUrlValid) {
     try {
-      await preloadModel(localPath);
-      loadedModels.add(localPath);
-      resolvedPaths.set(localPath, localPath); // Map local path to itself
-      console.log(`✅ Fallback to local: ${modelName}`);
-    } catch (localError) {
-      console.error(`❌ Both Supabase and local failed: ${modelName}`, localError);
-      failedModels.add(supabaseUrl);
+      // First, try to preload from Supabase
+      await preloadModel(supabaseUrl);
+      loadedModels.add(supabaseUrl);
+      resolvedPaths.set(localPath, supabaseUrl); // Map local path to Supabase URL
+      console.log(`✅ Model loaded from Supabase: ${modelName}`);
+      return;
+    } catch (error) {
+      console.warn(`❌ Failed to load from Supabase: ${modelName}`, error);
     }
+  } else {
+    console.log(`⚠️ Supabase URL not valid, using local: ${modelName}`);
+  }
+  
+  // Fallback to local file
+  try {
+    await preloadModel(localPath);
+    loadedModels.add(localPath);
+    resolvedPaths.set(localPath, localPath); // Map local path to itself
+    console.log(`✅ Using local model: ${modelName}`);
+  } catch (localError) {
+    console.error(`❌ Local model also failed: ${modelName}`, localError);
+    failedModels.add(supabaseUrl);
   }
 };
 

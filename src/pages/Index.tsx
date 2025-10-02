@@ -1,7 +1,7 @@
-import { RedLightGreenLight } from '@/game/RedLightGreenLight';
+import { GameManager } from '@/game/GameManager';
 
 const Index = () => {
-  return <RedLightGreenLight />;
+  return <GameManager />;
 };
 
 export default Index;

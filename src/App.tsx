@@ -8,6 +8,8 @@ import NotFound from "./pages/NotFound";
 import Lobby from "./pages/Lobby";
 import Room from "./pages/Room";
 import RoomGame from "./pages/RoomGame";
+import MultiplayerRoomGame from "./pages/MultiplayerRoomGame";
+import { GameManager } from "./game/GameManager";
 
 const queryClient = new QueryClient();
 
@@ -16,12 +18,20 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true
+        }}
+      >
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/lobby" element={<Lobby />} />
           <Route path="/room/:code" element={<Room />} />
           <Route path="/room/:code/game" element={<RoomGame />} />
+          <Route path="/room/:code/multiplayer" element={<MultiplayerRoomGame />} />
+          <Route path="/game" element={<GameManager />} />
+          <Route path="/game/:level" element={<GameManager />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

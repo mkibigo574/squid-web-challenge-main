@@ -2,17 +2,12 @@ import { getSupabaseUrl } from '@/lib/supabase';
 
 // Helper function to create model config with environment-aware path selection
 const createModelConfig = (supabasePath: string, localPath: string, config: any) => {
-  const supabaseUrl = getSupabaseUrl(supabasePath);
-  const isProduction = import.meta.env.PROD;
-  const useSupabaseInDev = String(import.meta.env.VITE_USE_SUPABASE_MODELS || '').toLowerCase() === 'true';
-  
+  // Force use of local models to avoid Supabase connection issues
   return {
     ...config,
-    supabasePath: supabaseUrl,
+    supabasePath: localPath, // Use local path as fallback
     localPath,
-    // In production, always use Supabase URL.
-    // In development, use local path unless VITE_USE_SUPABASE_MODELS=true
-    path: isProduction || useSupabaseInDev ? supabaseUrl : localPath,
+    path: localPath, // Always use local path
     fallback: 'primitive'
   };
 };

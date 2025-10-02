@@ -7,12 +7,14 @@ import { Doll } from './components/Doll';
 import { GameUI } from './components/GameUI';
 import { ModelTester } from './components/ModelTester';
 import { Soldier } from './components/Soldier';
+import { LevelProgression } from './components/LevelProgression';
 import { MODEL_CONFIG } from './config/models';
 import { preloadAllModels } from './utils/modelPreloader';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Celebration } from './components/Celebration';
 import { FIELD_CONFIG } from './config/field';
+import { GameLevel } from './hooks/useGameLevels';
 
 
 
@@ -21,7 +23,12 @@ import { FIELD_CONFIG } from './config/field';
 
 
 
-export const RedLightGreenLight = () => {
+interface RedLightGreenLightProps {
+  onLevelChange?: (level: GameLevel) => void;
+  onNextLevel?: () => void;
+}
+
+export const RedLightGreenLight = ({ onLevelChange, onNextLevel }: RedLightGreenLightProps = {}) => {
   const {
     gameState,
     lightState,
@@ -275,6 +282,13 @@ export const RedLightGreenLight = () => {
 
   return (
     <div className="w-full h-screen relative bg-gradient-to-b from-blue-400 to-blue-600">
+      {/* Level Progression */}
+      <LevelProgression 
+        onLevelChange={onLevelChange || (() => {})}
+        onNextLevel={onNextLevel || (() => {})}
+        showNextLevelButton={gameState === 'won'}
+      />
+      
       <Canvas
         shadows
         camera={{ 
