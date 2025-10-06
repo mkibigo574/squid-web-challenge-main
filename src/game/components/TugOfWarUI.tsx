@@ -59,22 +59,28 @@ export const TugOfWarUI = ({
     }
   }, [gameState, showNextLevel]);
 
-  const getRopePositionText = () => {
-    switch (ropePosition) {
-      case 'left': return 'Red Team Pulling!';
-      case 'right': return 'Green Team Pulling!';
-      case 'center': return 'Balanced';
-      default: return 'Balanced';
-    }
-  };
+  // Dynamic rope status based on who is currently pulling
+  const getRopeStatus = () => {
+    const leftPull = players
+      .filter((p) => (p.position ?? 0) < 0 && p.isPulling)
+      .reduce((sum, p) => sum + (p.pullStrength ?? 0), 0);
+    const rightPull = players
+      .filter((p) => (p.position ?? 0) >= 0 && p.isPulling)
+      .reduce((sum, p) => sum + (p.pullStrength ?? 0), 0);
 
-  const getRopePositionColor = () => {
-    switch (ropePosition) {
-      case 'left': return 'text-green-500';
-      case 'right': return 'text-red-500';
-      case 'center': return 'text-yellow-500';
-      default: return 'text-yellow-500';
+    if (leftPull === 0 && rightPull === 0) {
+      return { text: 'Balanced', color: 'text-yellow-500' };
     }
+    if (leftPull > rightPull) {
+      return { text: 'Red Team is winning', color: 'text-red-500' };
+    }
+    if (rightPull > leftPull) {
+      return { text: 'Green Team is winning', color: 'text-green-500' };
+    }
+    // Tie while pulling → fall back to rope position
+    if (ropePosition === 'left') return { text: 'Red Team Pulling!', color: 'text-red-500' };
+    if (ropePosition === 'right') return { text: 'Green Team Pulling!', color: 'text-green-500' };
+    return { text: 'Balanced', color: 'text-yellow-500' };
   };
 
   return (
@@ -85,7 +91,9 @@ export const TugOfWarUI = ({
         <div className="text-sm space-y-1">
           <div>Status: <span className="font-semibold">{gameState}</span></div>
           <div>Time: <span className="font-semibold">{Math.ceil(timeLeft)}s</span></div>
-          <div>Rope: <span className={`font-semibold ${getRopePositionColor()}`}>{getRopePositionText()}</span></div>
+          {(() => { const s = getRopeStatus(); return (
+            <div>Rope: <span className={`font-semibold ${s.color}`}>{s.text}</span></div>
+          ); })()}
         </div>
       </div>
 
@@ -206,7 +214,9 @@ export const TugOfWarUI = ({
                 <div className="text-xs text-green-400">Green Team</div>
               </div>
             </div>
-            <div className="text-sm mt-2">{getRopePositionText()}</div>
+            {(() => { const s = getRopeStatus(); return (
+              <div className="text-sm mt-2">{s.text}</div>
+            ); })()}
           </div>
         </div>
       )}
@@ -219,7 +229,7 @@ export const TugOfWarUI = ({
             <div className="w-64 h-4 bg-gray-600 rounded-full">
               <div 
                 className="h-4 bg-blue-500 rounded-full transition-all duration-1000"
-                style={{ width: `${(timeLeft / 30) * 100}%` }}
+                style={{ width: `${(timeLeft / 20) * 100}%` }}
               ></div>
             </div>
             <div className="text-sm mt-2">{Math.ceil(timeLeft)} seconds</div>

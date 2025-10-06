@@ -28,11 +28,12 @@ export const useMultiplayerTugOfWar = () => {
   const [ended, setEnded] = useState(false);
   
   const selfId = useRef<string>(multiplayerManager.getSelfId() || crypto.randomUUID());
+  const selfTeamSide = useRef<'left' | 'right'>(Math.random() > 0.5 ? 'left' : 'right');
   const gameUpdateInterval = useRef<NodeJS.Timeout | null>(null);
   const lastRopeUpdate = useRef<number>(0);
   const timeLeftRef = useRef<number>(30);
   
-  const GAME_DURATION = 30;
+  const GAME_DURATION = 20;
   const PULL_STRENGTH_INCREASE = 0.02;
   const PULL_STRENGTH_DECAY = 0.01;
   const ROPE_MOVEMENT_THRESHOLD = 0.3;
@@ -56,7 +57,10 @@ export const useMultiplayerTugOfWar = () => {
 
     const handleGameStateChange = (newState: any) => {
       console.log('🎮 Game state change received:', newState);
-      
+      // Ignore non–Tug-of-War events (e.g., RLGL) unless clearly tagged
+      const isTugOfWarEvent = newState?.tugOfWar === true || Object.prototype.hasOwnProperty.call(newState, 'ropePosition');
+      if (!isTugOfWarEvent) return;
+
       if (newState.gameState) {
         console.log('🎮 Setting gameState to:', newState.gameState);
         setGameState(newState.gameState);
@@ -87,14 +91,13 @@ export const useMultiplayerTugOfWar = () => {
     };
 
     const handleTimeUpdate = (payload: any) => {
+      if (payload?.tugOfWar !== true) return;
       if (payload.timeLeft !== undefined) {
         console.log('Client received time update:', payload.timeLeft);
         timeLeftRef.current = payload.timeLeft;
         setTimeLeft(payload.timeLeft);
       }
-      if (payload.gameState) {
-        setGameState(payload.gameState);
-      }
+      // Do not set generic gameState from a time update
     };
 
     const handleCountdownUpdate = (payload: any) => {
@@ -180,7 +183,8 @@ export const useMultiplayerTugOfWar = () => {
           multiplayerManager.broadcast('game_state_changed', { 
             gameState: 'won',
             winners: winningPlayers,
-            ended: true 
+            ended: true,
+            tugOfWar: true 
           });
         }
       }
@@ -241,10 +245,15 @@ export const useMultiplayerTugOfWar = () => {
       
       console.log('Host updating timer:', newTimeLeft);
       
-      // Broadcast time update to all clients
-      multiplayerManager.broadcast('tug_of_war_time_update', { 
+      // Broadcast time update to all clients (namespaced + flagged)
+      multiplayerManager.broadcast('TUG_OF_WAR_TIME_UPDATE', { 
+        tugOfWar: true,
         timeLeft: newTimeLeft,
-        gameState: 'playing'
+      });
+      // Backward-compat lowercase event name
+      multiplayerManager.broadcast('tug_of_war_time_update', {
+        tugOfWar: true,
+        timeLeft: newTimeLeft,
       });
 
       if (newTimeLeft <= 0) {
@@ -257,7 +266,7 @@ export const useMultiplayerTugOfWar = () => {
   const startGame = useCallback(() => {
     if (!isHost) return;
     
-    console.log('🎮 Starting Tug of War game - setting timer to exactly 30');
+    console.log('🎮 Starting Tug of War game - setting timer to exactly 20');
     console.log('🎮 Current state before start:', { gameState, ropePosition, timeLeft, ended });
     
     setGameState('countdown');
@@ -267,27 +276,31 @@ export const useMultiplayerTugOfWar = () => {
     setRopePosition('center');
     setWinners([]);
     setEnded(false);
-    
-    // Reset all players
-    const resetPlayers = players.map(player => ({
-      ...player,
-      isPulling: false,
-      pullStrength: 0,
-      position: 0,
-      isEliminated: false
-    }));
+
+    // Reset all players to their team sides so we don't trigger instant win
+    const resetPlayers = players.map((player, idx) => {
+      const isLeft = player.position < 0 || (player.position === 0 && idx % 2 === 0);
+      return {
+        ...player,
+        isPulling: false,
+        pullStrength: 0,
+        position: isLeft ? -6 : 6,
+        isEliminated: false
+      };
+    });
     setPlayers(resetPlayers);
     
     console.log('🎮 State after reset:', { gameState: 'countdown', ropePosition: 'center', timeLeft: GAME_DURATION });
     
-    // Broadcast initial state with exact timer
+    // Broadcast initial state with exact timer (flag as tugOfWar)
     multiplayerManager.broadcast('game_state_changed', {
       gameState: 'countdown',
       countdown: 3,
       timeLeft: GAME_DURATION,
       ropePosition: 'center',
       winners: [],
-      ended: false
+      ended: false,
+      tugOfWar: true
     });
   }, [isHost, players, gameState, ropePosition, timeLeft, ended]);
 
@@ -314,14 +327,17 @@ export const useMultiplayerTugOfWar = () => {
     setPullStrength(0);
     setGameState('waiting');
     
-    // Reset all players
-    const resetPlayers = players.map(player => ({
-      ...player,
-      isPulling: false,
-      pullStrength: 0,
-      position: 0,
-      isEliminated: false
-    }));
+    // Reset all players to their team sides
+    const resetPlayers = players.map((player, idx) => {
+      const isLeft = player.position < 0 || (player.position === 0 && idx % 2 === 0);
+      return {
+        ...player,
+        isPulling: false,
+        pullStrength: 0,
+        position: isLeft ? -6 : 6,
+        isEliminated: false
+      };
+    });
     setPlayers(resetPlayers);
     
     console.log('🔄 State after reset:', { 
@@ -341,7 +357,8 @@ export const useMultiplayerTugOfWar = () => {
         ropePosition: 'center',
         countdown: 3,
         winners: [],
-        ended: false
+        ended: false,
+        tugOfWar: true
       });
       console.log('🔄 Reset complete - game should be in waiting state');
     }, 100);
@@ -455,11 +472,13 @@ export const useMultiplayerTugOfWar = () => {
     });
   }, [isHost, ropePosition, players, gameState, timeLeft, ended]);
 
-  // Game update loop
+  // Game update loop (stable deps to avoid restarts on presence changes)
   useEffect(() => {
     if (gameState === 'playing') {
+      if (gameUpdateInterval.current) {
+        return; // avoid duplicate intervals
+      }
       console.log('Starting game update loop, timeLeft:', timeLeft);
-      
       gameUpdateInterval.current = setInterval(() => {
         updateRopePosition();
         updateGameTime();
@@ -476,7 +495,7 @@ export const useMultiplayerTugOfWar = () => {
         clearInterval(gameUpdateInterval.current);
       }
     };
-  }, [gameState, updateRopePosition, updateGameTime]);
+  }, [gameState, isHost]);
 
   // Countdown logic
   useEffect(() => {
@@ -494,16 +513,17 @@ export const useMultiplayerTugOfWar = () => {
       console.log('Countdown finished - starting game with timer at exactly 30');
       
       // Ensure timer is properly reset before starting
-      timeLeftRef.current = GAME_DURATION;
-      setTimeLeft(GAME_DURATION);
+      timeLeftRef.current = GAME_DURATION; // fixed 20s
+      setTimeLeft(GAME_DURATION); // fixed 20s
       
       setGameState('playing');
       
       // Broadcast game state change to all clients with exact timer
       multiplayerManager.broadcast('game_state_changed', { 
         gameState: 'playing',
-        timeLeft: GAME_DURATION,
-        ropePosition: 'center'
+        timeLeft: GAME_DURATION, // fixed 20s
+        ropePosition: 'center',
+        tugOfWar: true
       });
       
       console.log('Game started with timer at:', timeLeftRef.current);
@@ -526,19 +546,48 @@ export const useMultiplayerTugOfWar = () => {
     });
   }, [winners, gameState, ended, isHost]);
 
-  // Update self player data
+  // Update self player presence without randomizing team each time
   useEffect(() => {
     const selfPlayer = {
       id: selfId.current,
       isPulling,
       pullStrength,
-      position: Math.random() > 0.5 ? 1 : -1, // Randomly assign left or right team
+      position: selfTeamSide.current === 'left' ? -1 : 1,
       isEliminated: false,
       ts: Date.now()
     };
 
     multiplayerManager.updatePresence(selfPlayer);
   }, [isPulling, pullStrength]);
+
+  // Ensure local players array reflects self pulling immediately (so rope reacts locally)
+  useEffect(() => {
+    setPlayers(prev => {
+      const idx = prev.findIndex(p => p.id === selfId.current);
+      if (idx === -1) {
+        return [
+          ...prev,
+          {
+            id: selfId.current,
+            name: 'You',
+            isEliminated: false,
+            isPulling,
+            pullStrength,
+            position: selfTeamSide.current === 'left' ? -6 : 6,
+            ts: Date.now()
+          }
+        ];
+      }
+      const copy = [...prev];
+      copy[idx] = {
+        ...copy[idx],
+        isPulling,
+        pullStrength,
+        // Preserve current position; initial team chosen once by selfTeamSide
+      };
+      return copy;
+    });
+  }, [isPulling, pullStrength, setPlayers]);
 
   return {
     gameState,
