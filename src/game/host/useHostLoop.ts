@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { multiplayerManager } from '@/lib/multiplayer';
+import { FIELD_CONFIG } from '../config/field';
 
 export function useHostLoop(active: boolean, gameState: 'waiting' | 'countdown' | 'playing', resetKey?: number) {
   const [currentLightState, setCurrentLightState] = useState<'green' | 'red'>('green');
@@ -7,7 +8,7 @@ export function useHostLoop(active: boolean, gameState: 'waiting' | 'countdown' 
   const gameDuration = 50; // 50 seconds
   const lightTimeoutRef = useRef<number | undefined>();
   const timerTimeoutRef = useRef<number | undefined>();
-  const FINISH_Z = 25;
+  const FINISH_Z = FIELD_CONFIG.FINISH_Z;
 
   // Clean up timeouts
   const clearTimeouts = () => {
@@ -78,10 +79,13 @@ export function useHostLoop(active: boolean, gameState: 'waiting' | 'countdown' 
       if (timeLeft <= 0) {
         // Game ended - check for winners
         const players = multiplayerManager.getPlayersList();
+        console.log('⏰ Timer ended. Checking winners. Finish line Z:', FINISH_Z);
+        console.log('⏰ All players positions:', players.map(p => ({ id: p.id, z: p.z, isEliminated: p.isEliminated })));
+        
         const winners = players.filter(p => !p.isEliminated && p.z && p.z >= FINISH_Z);
         const winnerIds = winners.map(p => p.id);
         
-        console.log('Game ended. Winners:', winnerIds, 'All players:', players);
+        console.log('⏰ Game ended. Winners who crossed finish line:', winnerIds, 'All players:', players);
         multiplayerManager.broadcastFinal(winnerIds);
         return;
       }

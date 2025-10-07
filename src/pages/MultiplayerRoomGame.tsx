@@ -139,7 +139,11 @@ function WinChecker({ playerRef, onWin }: { playerRef: React.RefObject<THREE.Gro
     const g = playerRef.current;
     if (!g) return;
 
-    if (g.position.z >= FIELD_CONFIG.WIN_Z_THRESHOLD) onWin();
+    // Only trigger win if player has actually crossed the finish line
+    if (g.position.z >= FIELD_CONFIG.WIN_Z_THRESHOLD) {
+      console.log('🏁 Player crossed finish line! Position:', g.position.z, 'Threshold:', FIELD_CONFIG.WIN_Z_THRESHOLD);
+      onWin();
+    }
   });
   return null;
 }
