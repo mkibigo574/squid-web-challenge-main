@@ -10,6 +10,7 @@ import { Player } from '../game/components/Player';
 import { Doll } from '../game/components/Doll';
 import { Soldier } from '../game/components/Soldier';
 import { Celebration } from '../game/components/Celebration';
+import { NameTag } from '../game/components/NameTag';
 import { MultiplayerTugOfWar } from '../game/MultiplayerTugOfWar';
 import { MODEL_CONFIG } from '../game/config/models';
 import { FIELD_CONFIG } from '../game/config/field';
@@ -119,6 +120,14 @@ function RemotePlayers({ players, selfId }: { players: PresencePlayer[]; selfId:
               />
             </mesh>
           </group>
+          
+          {/* Name tag for remote players */}
+          <NameTag 
+            name={p.name || `Player ${p.id.slice(-4)}`} 
+            position={[0, 2.5, 0]} 
+            isEliminated={p.isEliminated || false}
+            color={p.isMoving ? '#ff8c00' : '#00bfff'}
+          />
         </group>
       ))}
     </>
@@ -779,6 +788,8 @@ export default function MultiplayerRoomGame() {
            canMove={gameState === 'playing'}
            resetKey={hostLoopKey}
            onMovementChange={setIsPlayerMoving}
+           name={self.name}
+           isSelf={true}
          />
 
         {/* Position Reporter */}

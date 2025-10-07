@@ -6,6 +6,7 @@ import { usePlayerMovement } from '../hooks/usePlayerMovement';
 import { MODEL_CONFIG } from '../config/models';
 import { LightState, GameState } from '../hooks/useGame';
 import { multiplayerManager } from '@/lib/multiplayer';
+import { NameTag } from './NameTag';
 
 interface PlayerProps {
   lightState: LightState;
@@ -17,6 +18,8 @@ interface PlayerProps {
   onMovementChange?: (isMoving: boolean) => void; // Add this prop
   canMove?: boolean; // Add this prop to control movement
   resetKey?: number; // Add reset key prop
+  name?: string; // Add name prop for name tag
+  isSelf?: boolean; // Add isSelf prop for "YOU" tag
 }
 
 // Fallback primitive player component
@@ -414,6 +417,17 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(({
           {/* Magical elimination effect */}
           {gameState === 'eliminated' && (
             <EliminationEffect />
+          )}
+          
+          {/* Name tag */}
+          {name && (
+            <NameTag 
+              name={name} 
+              position={[0, 2.5, 0]} 
+              isEliminated={gameState === 'eliminated'}
+              color="#4a90e2"
+              isSelf={isSelf}
+            />
           )}
         </group>
       </group>
