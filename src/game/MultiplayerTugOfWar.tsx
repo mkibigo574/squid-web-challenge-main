@@ -225,6 +225,8 @@ export const MultiplayerTugOfWar = () => {
           isPulling={isPulling}
           leftPlayerPos={players.find(p => p.position < 0)?.position || -6}
           rightPlayerPos={players.find(p => p.position >= 0)?.position || 6}
+          hasLeftPlayer={players.some(p => p.position < 0)}
+          hasRightPlayer={players.some(p => p.position >= 0)}
         />
         
         {/* Players */}

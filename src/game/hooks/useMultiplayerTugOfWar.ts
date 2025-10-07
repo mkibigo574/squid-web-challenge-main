@@ -26,6 +26,7 @@ export const useMultiplayerTugOfWar = () => {
   const [isHost, setIsHost] = useState(false);
   const [winners, setWinners] = useState<string[]>([]);
   const [ended, setEnded] = useState(false);
+  const lastLeadingSideRef = useRef<'red' | 'green' | null>(null);
   
   const selfId = useRef<string>(multiplayerManager.getSelfId() || crypto.randomUUID());
   const selfTeamSide = useRef<'left' | 'right'>(Math.random() > 0.5 ? 'left' : 'right');
@@ -229,6 +230,17 @@ export const useMultiplayerTugOfWar = () => {
           multiplayerManager.broadcast('rope_position_changed', { ropePosition: newPosition });
         }
 
+        // Track last side that was leading (used as tiebreaker at timeout)
+        if (newPosition === 'left') lastLeadingSideRef.current = 'red';
+        else if (newPosition === 'right') lastLeadingSideRef.current = 'green';
+        else {
+          // When centered, prefer current pull effort to track a leading side
+          const redPull = leftPlayers.reduce((sum, p) => sum + (p.isPulling ? p.pullStrength : 0), 0);
+          const greenPull = rightPlayers.reduce((sum, p) => sum + (p.isPulling ? p.pullStrength : 0), 0);
+          if (redPull > greenPull) lastLeadingSideRef.current = 'red';
+          else if (greenPull > redPull) lastLeadingSideRef.current = 'green';
+        }
+
         return newPosition;
       });
 
@@ -251,7 +263,7 @@ export const useMultiplayerTugOfWar = () => {
         timeLeft: newTimeLeft,
       });
       // Backward-compat lowercase event name
-      multiplayerManager.broadcast('tug_of_war_time_update', {
+      multiplayerManager.broadcast('tug_of_war_time_update', { 
         tugOfWar: true,
         timeLeft: newTimeLeft,
       });
@@ -276,16 +288,17 @@ export const useMultiplayerTugOfWar = () => {
     setRopePosition('center');
     setWinners([]);
     setEnded(false);
+    lastLeadingSideRef.current = null;
 
     // Reset all players to their team sides so we don't trigger instant win
     const resetPlayers = players.map((player, idx) => {
       const isLeft = player.position < 0 || (player.position === 0 && idx % 2 === 0);
       return {
-        ...player,
-        isPulling: false,
-        pullStrength: 0,
+      ...player,
+      isPulling: false,
+      pullStrength: 0,
         position: isLeft ? -6 : 6,
-        isEliminated: false
+      isEliminated: false
       };
     });
     setPlayers(resetPlayers);
@@ -326,16 +339,17 @@ export const useMultiplayerTugOfWar = () => {
     setIsPulling(false);
     setPullStrength(0);
     setGameState('waiting');
+    lastLeadingSideRef.current = null;
     
     // Reset all players to their team sides
     const resetPlayers = players.map((player, idx) => {
       const isLeft = player.position < 0 || (player.position === 0 && idx % 2 === 0);
       return {
-        ...player,
-        isPulling: false,
-        pullStrength: 0,
+      ...player,
+      isPulling: false,
+      pullStrength: 0,
         position: isLeft ? -6 : 6,
-        isEliminated: false
+      isEliminated: false
       };
     });
     setPlayers(resetPlayers);
@@ -396,11 +410,87 @@ export const useMultiplayerTugOfWar = () => {
     console.log('🏁 ENDING GAME - Current state:', { gameState, ropePosition, timeLeft, ended });
     console.trace('🏁 End game called from:');
     
-    // Determine winners based on rope position when time runs out
-    let winningPlayers: string[] = [];
-    
+    // Re-evaluate immediate pit victory at timeout (authoritative safeguard)
+    const CENTER_PIT_THRESHOLD = 1.0;
     const redTeamPlayers = players.filter(player => !player.isEliminated && player.position < 0);
     const greenTeamPlayers = players.filter(player => !player.isEliminated && player.position >= 0);
+    
+    if (redTeamPlayers.length > 0 && redTeamPlayers.every(player => Math.abs(player.position) <= CENTER_PIT_THRESHOLD)) {
+      const winningPlayers = greenTeamPlayers.map(p => p.id);
+      console.log('🏁 Timeout pit check: Green team wins - Red team in pit');
+      setWinners(winningPlayers);
+      setEnded(true);
+      setGameState('won');
+      multiplayerManager.broadcast('game_state_changed', {
+        gameState: 'won',
+        ended: true,
+        winners: winningPlayers,
+        tugOfWar: true
+      });
+      return;
+    }
+    if (greenTeamPlayers.length > 0 && greenTeamPlayers.every(player => Math.abs(player.position) <= CENTER_PIT_THRESHOLD)) {
+      const winningPlayers = redTeamPlayers.map(p => p.id);
+      console.log('🏁 Timeout pit check: Red team wins - Green team in pit');
+      setWinners(winningPlayers);
+      setEnded(true);
+      setGameState('won');
+      multiplayerManager.broadcast('game_state_changed', {
+        gameState: 'won',
+        ended: true,
+        winners: winningPlayers,
+        tugOfWar: true
+      });
+      return;
+    }
+
+    // Resolve by the visible rope status the players see.
+    // This aligns end-game results with the UI state and avoids mismatches.
+    const effectiveRopePosition: RopePosition = ropePosition;
+
+    // Resolve strictly by effective rope status at timeout per request
+    if (effectiveRopePosition === 'left') {
+      const winningPlayers = redTeamPlayers.map(p => p.id);
+      console.log('🏁 Timeout rope status (computed): left → Red team wins');
+      setWinners(winningPlayers);
+      setEnded(true);
+      setGameState('won');
+      multiplayerManager.broadcast('game_state_changed', {
+        gameState: 'won',
+        ended: true,
+        winners: winningPlayers,
+        tugOfWar: true
+      });
+      return;
+    } else if (effectiveRopePosition === 'right') {
+      const winningPlayers = greenTeamPlayers.map(p => p.id);
+      console.log('🏁 Timeout rope status (computed): right → Green team wins');
+      setWinners(winningPlayers);
+      setEnded(true);
+      setGameState('won');
+      multiplayerManager.broadcast('game_state_changed', {
+        gameState: 'won',
+        ended: true,
+        winners: winningPlayers,
+        tugOfWar: true
+      });
+      return;
+    } else if (effectiveRopePosition === 'center') {
+      console.log('🏁 Timeout rope status (computed): center → Tie, no winners');
+      setWinners([]);
+      setEnded(true);
+      setGameState('won');
+      multiplayerManager.broadcast('game_state_changed', {
+        gameState: 'won',
+        ended: true,
+        winners: [],
+        tugOfWar: true
+      });
+      return;
+    }
+
+    // Determine winners based on rope position when time runs out
+    let winningPlayers: string[] = [];
     
     console.log('🏁 Team analysis:', {
       ropePosition,
@@ -421,23 +511,9 @@ export const useMultiplayerTugOfWar = () => {
         winningPlayers = greenTeamPlayers.map(p => p.id);
         console.log('🏁 Green team wins - rope pulled to right side');
       } else {
-        // Rope is in center - determine winner by which team is further from center
-        const redTeamAvgDistance = redTeamPlayers.reduce((sum, p) => sum + Math.abs(p.position), 0) / redTeamPlayers.length;
-        const greenTeamAvgDistance = greenTeamPlayers.reduce((sum, p) => sum + Math.abs(p.position), 0) / greenTeamPlayers.length;
-        
-        if (redTeamAvgDistance > greenTeamAvgDistance) {
-          // Red team is further from center - they win
-          winningPlayers = redTeamPlayers.map(p => p.id);
-          console.log('🏁 Red team wins - further from center (tie-breaker)');
-        } else if (greenTeamAvgDistance > redTeamAvgDistance) {
-          // Green team is further from center - they win
-          winningPlayers = greenTeamPlayers.map(p => p.id);
-          console.log('🏁 Green team wins - further from center (tie-breaker)');
-        } else {
-          // True tie - no winners
-          winningPlayers = [];
-          console.log('🏁 Tie game - no winners');
-        }
+        // Rope is centered → tie
+        winningPlayers = [];
+        console.log('🏁 Rope centered at resolution → Tie');
       }
     } else if (redTeamPlayers.length > 0) {
       // Only red team has players - they win by default
@@ -468,7 +544,8 @@ export const useMultiplayerTugOfWar = () => {
     multiplayerManager.broadcast('game_state_changed', {
       gameState: 'won',
       ended: true,
-      winners: winningPlayers
+      winners: winningPlayers,
+      tugOfWar: true
     });
   }, [isHost, ropePosition, players, gameState, timeLeft, ended]);
 

@@ -117,7 +117,7 @@ export const TugOfWarPlayer = ({
     
     // 2. Pulling force - when this player is pulling, move away from center
     if (isPulling) {
-      const pullForce = teamSide === 'left' ? -pullStrength * 1.2 : pullStrength * 1.2;
+      const pullForce = teamSide === 'left' ? -pullStrength * 1.5 : pullStrength * 1.5;
       totalForce += pullForce;
     }
     
@@ -130,7 +130,7 @@ export const TugOfWarPlayer = ({
     }
     
     // Apply physics with momentum
-    const friction = 0.95; // Higher friction for more controlled movement
+    const friction = 0.55; // Higher friction for more controlled movement
     const newVelocity = (velocity + totalForce * delta * 20) * friction;
     const newPosition = currentPos + newVelocity * delta * 20;
     

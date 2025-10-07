@@ -39,6 +39,27 @@ export const TugOfWarUI = ({
 }: TugOfWarUIProps) => {
   const [showNextLevel, setShowNextLevel] = useState(false);
   
+  // Compute winning team label and winner display names
+  const getWinningTeamName = () => {
+    if (!winners || winners.length === 0) return undefined;
+    const firstWinnerId = winners[0];
+    const firstWinner = players.find(p => p.id === firstWinnerId);
+    if (firstWinner && typeof firstWinner.position === 'number') {
+      return firstWinner.position < 0 ? 'Red Team' : 'Green Team';
+    }
+    // Fallback to rope position if player not found
+    if (ropePosition === 'left') return 'Red Team';
+    if (ropePosition === 'right') return 'Green Team';
+    return 'Balanced';
+  };
+
+  const winnerNames = Array.isArray(winners)
+    ? winners
+        .map(id => players.find(p => p.id === id))
+        .filter(Boolean)
+        .map((p: any) => p.name || `Player ${String(p.id).slice(0, 4)}`)
+    : [];
+  
   // Debug logging for victory screen conditions
   useEffect(() => {
     const shouldShowVictory = gameState === 'won' || ended;
@@ -137,11 +158,13 @@ export const TugOfWarUI = ({
           <div className="text-center text-white">
             <div className="text-6xl font-bold mb-4">VICTORY!</div>
             <div className="text-2xl mb-6">
-              {winners.length > 0 ? `Team Won! (${winners.length} players)` : 'Game Ended!'}
+              {winners.length > 0
+                ? `Team '${getWinningTeamName()}' Won!`
+                : (ropePosition === 'center' ? 'No Winners in this Round!' : 'Game Ended!')}
             </div>
             {winners.length > 0 && (
               <div className="text-lg mb-4">
-                Winners: {winners.join(', ')}
+                Winners: {winnerNames.join(', ')}
               </div>
             )}
             <div className="space-x-4">
