@@ -6,7 +6,7 @@
 
   # Allow listing specific client-side env keys to ignore in secret scanning
   [build.environment]
-    SECRETS_SCAN_OMIT_KEYS = "VITE_PUBLIC_SUPABASE_URL,VITE_PUBLIC_SUPABASE_ANON_KEY"
+    SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY"
 
 # SPA routing: send all routes to index.html so React Router can handle them
 [[redirects]]
