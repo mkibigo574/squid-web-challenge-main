@@ -69,6 +69,86 @@ const PlayerLoading = () => (
   </group>
 );
 
+// Magical elimination effect component
+const EliminationEffect = () => {
+  const [particles, setParticles] = useState<Array<{ id: number; position: [number, number, number]; velocity: [number, number, number]; life: number }>>([]);
+  const [showEffect, setShowEffect] = useState(true);
+
+  useEffect(() => {
+    // Create particle explosion
+    const newParticles = Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      position: [0, 1, 0] as [number, number, number],
+      velocity: [
+        (Math.random() - 0.5) * 4,
+        Math.random() * 3 + 1,
+        (Math.random() - 0.5) * 4
+      ] as [number, number, number],
+      life: 1
+    }));
+    setParticles(newParticles);
+
+    // Hide effect after animation
+    const timer = setTimeout(() => setShowEffect(false), 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useFrame((_, delta) => {
+    setParticles(prev => 
+      prev.map(particle => ({
+        ...particle,
+        position: [
+          particle.position[0] + particle.velocity[0] * delta,
+          particle.position[1] + particle.velocity[1] * delta,
+          particle.position[2] + particle.velocity[2] * delta
+        ] as [number, number, number],
+        velocity: [
+          particle.velocity[0],
+          particle.velocity[1] - 9.8 * delta, // gravity
+          particle.velocity[2]
+        ] as [number, number, number],
+        life: particle.life - delta * 0.5
+      })).filter(particle => particle.life > 0)
+    );
+  });
+
+  if (!showEffect) return null;
+
+  return (
+    <group>
+      {/* Central magical burst */}
+      <mesh position={[0, 1, 0]}>
+        <sphereGeometry args={[0.5]} />
+        <meshBasicMaterial color="#ff6b6b" transparent opacity={0.8} />
+      </mesh>
+      
+      {/* Particle explosion */}
+      {particles.map(particle => (
+        <mesh key={particle.id} position={particle.position}>
+          <sphereGeometry args={[0.05]} />
+          <meshBasicMaterial 
+            color={particle.id % 3 === 0 ? "#ff6b6b" : particle.id % 3 === 1 ? "#4ecdc4" : "#ffe66d"} 
+            transparent 
+            opacity={particle.life} 
+          />
+        </mesh>
+      ))}
+      
+      {/* Magical sparkles */}
+      {Array.from({ length: 8 }).map((_, i) => (
+        <mesh key={`sparkle-${i}`} position={[
+          (Math.random() - 0.5) * 2,
+          Math.random() * 2,
+          (Math.random() - 0.5) * 2
+        ]}>
+          <sphereGeometry args={[0.02]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.9} />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
 // GLB Player component (no state updates during render/Suspense)
 const GLBPlayer = ({ modelPath, state }: { modelPath: string; state: string }) => {
   const { scene, animations } = useGLTF(modelPath);
@@ -317,16 +397,24 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(({
     <group ref={ref || playerGroupRef} position={[0, 0, -5]}>
       <group ref={offsetRef} position={[0, 0, 0]}>
         <group ref={fallRef} position={[0, 0, 0]}>
-          <Suspense fallback={<PlayerLoading />}>
-            {resolvedModelPath && !usePrimitive && assetChecked ? (
-              <GLBPlayer
-                modelPath={resolvedModelPath}
-                state={gameState === 'eliminated' ? 'fall' : gameState === 'won' ? 'happy' : (gameState === 'playing' && isMoving) ? 'run' : 'idle'}
-              />
-            ) : (
-              <PrimitivePlayer />
-            )}
-          </Suspense>
+          {/* Show player only if not eliminated */}
+          {gameState !== 'eliminated' && (
+            <Suspense fallback={<PlayerLoading />}>
+              {resolvedModelPath && !usePrimitive && assetChecked ? (
+                <GLBPlayer
+                  modelPath={resolvedModelPath}
+                  state={gameState === 'won' ? 'happy' : (gameState === 'playing' && isMoving) ? 'run' : 'idle'}
+                />
+              ) : (
+                <PrimitivePlayer />
+              )}
+            </Suspense>
+          )}
+          
+          {/* Magical elimination effect */}
+          {gameState === 'eliminated' && (
+            <EliminationEffect />
+          )}
         </group>
       </group>
     </group>
