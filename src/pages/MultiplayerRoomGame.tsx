@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+// Removed OrbitControls for deterministic camera follow
 import * as THREE from 'three';
 import { multiplayerManager } from '@/lib/multiplayer';
 import { useHostLoop } from '../game/host/useHostLoop';
@@ -53,33 +53,38 @@ function PositionReporter({ groupRef, light, onSelfEliminate, onMovementChange }
       return;
     }
 
-    const dx = x - last.current.x;
-    const dz = z - last.current.z;
-    const distance = Math.sqrt(dx * dx + dz * dz);
-    const speed = distance / dt;
-    const isMoving = speed > 0.01; // Threshold for movement detection
+    const dx = x - last.current.x, dz = z - last.current.z;
 
-    if (isMoving !== lastMoving.current) {
+    const distSq = dx * dx + dz * dz;
+    const MIN_DIST_PER_FRAME = 0.0004;
+    const isMoving = distSq > MIN_DIST_PER_FRAME;
+
+    const movementChanged = isMoving !== lastMoving.current;
+    if (movementChanged) {
+      multiplayerManager.updatePresence({ x, z, isMoving });
+      lastSent.current = now;
       lastMoving.current = isMoving;
+      
+      // Notify parent component about movement change
       onMovementChange?.(isMoving);
+    } else if (now - lastSent.current > 100) {
+      multiplayerManager.updatePresence({ x, z, isMoving });
+      lastSent.current = now;
     }
 
-    // Check for elimination during red light
-    if (light === 'red' && isMoving && !eliminated.current) {
-      const now = performance.now();
-      if (redSince.current) {
-        movingDuringRedMs.current += now - (last.current?.t || now);
-        if (movingDuringRedMs.current > 100) { // 100ms grace period
+    if (light === 'red' && redSince.current != null) {
+      const GRACE_MS = 200;
+      const SUSTAIN_MS = 150;
+      if (now - redSince.current > GRACE_MS) {
+        if (isMoving) movingDuringRedMs.current += dt;
+        else movingDuringRedMs.current = 0;
+        if (movingDuringRedMs.current > SUSTAIN_MS) {
           eliminated.current = true;
           onSelfEliminate();
+          
+          multiplayerManager.setSelfPresence({ isEliminated: true, isMoving: false, x, z });
         }
       }
-    }
-
-    // Send position update every 100ms
-    if (now - lastSent.current > 100) {
-      multiplayerManager.updatePresence({ x, z, isMoving, ts: now });
-      lastSent.current = now;
     }
 
     last.current = { x, z, t: now };
@@ -137,106 +142,52 @@ const FollowCamera = ({ targetRef, cameraMode }: { targetRef: React.RefObject<TH
     const cam = camera as THREE.PerspectiveCamera;
     cam.near = 0.1;
     cam.far = 500;
+    cam.up.set(0, 1, 0);
     cam.updateProjectionMatrix();
   }, [camera]);
 
-  useEffect(() => {
-    let raf = 0;
-    const update = () => {
-      const target = targetRef.current;
-      if (target) {
-        const worldPos = target.position.clone();
-        let desiredPos = camera.position.clone();
-        let lookAt = new THREE.Vector3();
-        const cam = camera as THREE.PerspectiveCamera;
-        let targetFov = cam.fov;
+  useFrame(() => {
+    const cam = camera as THREE.PerspectiveCamera;
+    const target = targetRef.current;
+    if (!target) return;
 
-        // Calculate look-at point based on player position and field layout
-        const fieldCenter = new THREE.Vector3(0, 0, 45); // Middle of the field (Z = -5 to 95)
-        const dollPosition = new THREE.Vector3(0, 0, 95); // Doll at finish line
-        
-        // Calculate a look-at point that's ahead of the player but not too far
-        const playerZ = worldPos.z;
-        const lookAheadDistance = Math.min(20, Math.max(5, 95 - playerZ)); // Look ahead, but not beyond doll
-        const lookAtPoint = new THREE.Vector3(0, 1, playerZ + lookAheadDistance);
-        
-        // Safety check: ensure lookAt point is always ahead of player
-        if (lookAtPoint.z <= playerZ) {
-          lookAtPoint.z = playerZ + 5; // Fallback: look 5 units ahead
-        }
-        
-        if (cameraMode === 'follow') {
-          // Follow camera: behind player, looking ahead
-          desiredPos = worldPos.clone().add(new THREE.Vector3(-3, 4, -8));
-          lookAt = lookAtPoint.clone(); // Look ahead of player
-          targetFov = 60; // Wider FOV to see more of the field
-        } else if (cameraMode === 'closeup') {
-          // Close-up: closer to player, looking ahead
-          desiredPos = worldPos.clone().add(new THREE.Vector3(-1.5, 2, -4));
-          lookAt = lookAtPoint.clone(); // Look ahead of player
-          targetFov = 45;
-        } else if (cameraMode === 'drone') {
-          // Drone: high above field center, looking down the entire field
-          desiredPos = new THREE.Vector3(0, 120, 45); // Higher above field center
-          lookAt = fieldCenter.clone(); // Look at field center to see entire field
-          targetFov = 90; // Very wide FOV to see entire field
-        } else {
-          // First person: player's view, looking ahead
-          const time = performance.now() * 0.001;
-          const shake = new THREE.Vector3(
-            Math.sin(time * 12) * 0.02,
-            Math.sin(time * 15 + 1) * 0.015,
-            0
-          );
-          desiredPos = worldPos.clone().add(new THREE.Vector3(0, 1.6, 0)).add(shake);
-          lookAt = lookAtPoint.clone(); // Look ahead of player
-          targetFov = 70; // Wide FOV for first person
-        }
+    target.updateWorldMatrix(true, false);
+    const worldPos = new THREE.Vector3();
+    target.getWorldPosition(worldPos);
 
-        // Debug logging for camera updates
-        if (Math.random() < 0.01) { // Log occasionally to avoid spam
-          console.log('🎥 Camera update:', {
-            mode: cameraMode,
-            worldPos: worldPos.toArray(),
-            desiredPos: desiredPos.toArray(),
-            lookAt: lookAt.toArray(),
-            targetFov,
-            playerZ,
-            lookAheadDistance,
-            lookAtPoint: lookAtPoint.toArray(),
-            dollPosition: dollPosition.toArray(),
-            fieldCenter: fieldCenter.toArray()
-          });
-        }
-        
-        // Additional safety: check if camera is looking backwards
-        const cameraToPlayer = worldPos.clone().sub(cam.position).normalize();
-        const cameraToLookAt = lookAt.clone().sub(cam.position).normalize();
-        const dotProduct = cameraToPlayer.dot(cameraToLookAt);
-        
-        if (dotProduct < 0) {
-          console.warn('🚨 Camera looking backwards detected!', {
-            cameraToPlayer: cameraToPlayer.toArray(),
-            cameraToLookAt: cameraToLookAt.toArray(),
-            dotProduct,
-            playerPos: worldPos.toArray(),
-            cameraPos: cam.position.toArray(),
-            lookAt: lookAt.toArray()
-          });
-        }
+    let desiredPos = cam.position.clone();
+    let lookAt = new THREE.Vector3();
+    let targetFov = cam.fov;
 
-        cam.position.lerp(desiredPos, 0.12);
-        cam.lookAt(lookAt);
+    if (cameraMode === 'follow') {
+      desiredPos = worldPos.clone().add(new THREE.Vector3(2.5, 3.0, -6.0));
+      lookAt = worldPos.clone().add(new THREE.Vector3(0, 1.0, 6));
+      targetFov = 50;
+    } else if (cameraMode === 'closeup') {
+      desiredPos = worldPos.clone().add(new THREE.Vector3(1.2, 1.2, -2.2));
+      lookAt = worldPos.clone().add(new THREE.Vector3(0, 1.4, 3));
+      targetFov = 35;
+    } else if (cameraMode === 'drone') {
+      desiredPos = new THREE.Vector3(0, 50, 10);
+      lookAt = new THREE.Vector3(0, 0, 10);
+      targetFov = 60;
+    } else {
+      const time = performance.now() * 0.001;
+      const shake = new THREE.Vector3(
+        Math.sin(time * 12) * 0.03,
+        Math.sin(time * 15 + 1) * 0.025,
+        0
+      );
+      desiredPos = worldPos.clone().add(new THREE.Vector3(0.0, 1.6, 0.2)).add(shake);
+      lookAt = worldPos.clone().add(new THREE.Vector3(0, 1.5, 6));
+      targetFov = 55;
+    }
 
-        // Smoothly lerp FOV per mode
-        cam.fov += (targetFov - cam.fov) * 0.1;
-        cam.updateProjectionMatrix();
-      }
-      raf = requestAnimationFrame(update);
-    };
-    raf = requestAnimationFrame(update);
-    return () => cancelAnimationFrame(raf);
-  }, [camera, targetRef, cameraMode]);
+    cam.position.lerp(desiredPos, 0.12);
+    cam.lookAt(lookAt);
+    cam.fov += (targetFov - cam.fov) * 0.1;
+    cam.updateProjectionMatrix();
+  });
   return null;
 };
 
@@ -384,6 +335,14 @@ export default function MultiplayerRoomGame() {
       if (newState.timeLeft !== undefined) setTimeLeft(newState.timeLeft);
       if (newState.winners) setWinners(newState.winners);
       if (newState.ended !== undefined) setEnded(newState.ended);
+
+      // Trigger local win/elim based on authoritative end-of-round winners
+      if (newState.ended === true) {
+        const winnersArr: string[] = Array.isArray(newState.winners) ? newState.winners : [];
+        const iWon = winnersArr.includes(self.id!);
+        setSelfWon(iWon);
+        setSelfElim(!iWon);
+      }
     };
 
     const handlePlayerEliminated = (payload: any) => {
@@ -518,6 +477,82 @@ export default function MultiplayerRoomGame() {
         </div>
       )}
 
+      {/* Center UI (Single-player style win/elimination overlays) */}
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-auto z-50">
+        {(selfWon || (ended && winners.includes(self.id!))) && (
+          <div className="space-y-4">
+            <div className="animate-bounce">
+              <h2 className="text-8xl font-bold text-green-400 drop-shadow-lg">🎉 YOU WIN! 🎉</h2>
+              <p className="text-2xl text-white drop-shadow-lg">Congratulations! You reached the finish line!</p>
+              <div className="text-4xl">🎈🎊🎉🎈🎊🎉</div>
+            </div>
+            <button
+              onClick={() => {
+                if (!isHost) return; // Only host triggers a new round
+                multiplayerManager.broadcastGameReset(50);
+                // Local clear
+                setSelfElim(false);
+                setSelfWon(false);
+                setEnded(false);
+                setWinners([]);
+                setGameState('waiting');
+                setLightState('green');
+                setTimeLeft(50);
+                setIsPlayerMoving(false);
+                setPlayerPosition(0);
+                setHostLoopKey(prev => prev + 1);
+                resetHostLoop();
+                if (playerRef.current) {
+                  playerRef.current.position.set(0, 0, -5);
+                  playerRef.current.rotation.y = 0;
+                }
+                multiplayerManager.setSelfPresence({ isEliminated: false, isMoving: false });
+              }}
+              className={`text-xl px-8 py-4 rounded ${isHost ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-500 cursor-not-allowed'}`}
+              disabled={!isHost}
+            >
+              {isHost ? 'Play Again' : 'Waiting for Host'}
+            </button>
+          </div>
+        )}
+
+        {(selfElim || (ended && !winners.includes(self.id!))) && !selfWon && (
+          <div className="space-y-4">
+            <h2 className="text-6xl font-bold text-red-400">ELIMINATED!</h2>
+            <p className="text-xl text-white">
+              {timeLeft === 0 ? 'Time ran out!' : 'You moved during red light!'}
+            </p>
+            <button
+              onClick={() => {
+                if (!isHost) return; // Only host triggers a new round
+                multiplayerManager.broadcastGameReset(50);
+                // Local clear
+                setSelfElim(false);
+                setSelfWon(false);
+                setEnded(false);
+                setWinners([]);
+                setGameState('waiting');
+                setLightState('green');
+                setTimeLeft(50);
+                setIsPlayerMoving(false);
+                setPlayerPosition(0);
+                setHostLoopKey(prev => prev + 1);
+                resetHostLoop();
+                if (playerRef.current) {
+                  playerRef.current.position.set(0, 0, -5);
+                  playerRef.current.rotation.y = 0;
+                }
+                multiplayerManager.setSelfPresence({ isEliminated: false, isMoving: false });
+              }}
+              className={`text-xl px-8 py-4 rounded ${isHost ? '' : 'bg-gray-500 cursor-not-allowed'} ${isHost ? 'bg-green-600 hover:bg-green-700' : ''}`}
+              disabled={!isHost}
+            >
+              {isHost ? 'Try Again' : 'Waiting for Host'}
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Progress bar */}
       {gameState === 'playing' && (
         <div className="absolute bottom-8 left-8 right-8 pointer-events-auto">
@@ -617,20 +652,11 @@ export default function MultiplayerRoomGame() {
         <WinChecker playerRef={playerRef} onWin={() => setSelfWon(true)} />
         
         {/* Celebration effect */}
-        {(selfWon) && (
+        {(selfWon || (ended && winners.includes(self.id!))) && (
           <Celebration gameState="won" />
         )}
         
-        {/* Controls */}
-        <OrbitControls
-          enablePan={false}
-          enableZoom={true}
-          enableRotate={true}
-          minPolarAngle={Math.PI / 6}
-          maxPolarAngle={Math.PI / 2}
-          minDistance={5}
-          maxDistance={15}
-        />
+        {/* Controls removed to avoid interfering with scripted camera */}
       </Canvas>
 
       {/* Camera Controls */}
