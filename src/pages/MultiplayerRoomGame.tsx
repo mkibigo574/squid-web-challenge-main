@@ -357,16 +357,43 @@ export default function MultiplayerRoomGame() {
       console.log('Host changed:', hostId, 'Am I host?', isNowHost);
     };
 
+    const handleGameReset = (payload: any) => {
+      console.log('Game reset received, resetting local state for all players');
+      // Reset all local state for all players
+      setSelfElim(false);
+      setSelfWon(false);
+      setEnded(false);
+      setWinners([]);
+      setGameState('waiting');
+      setLightState('green');
+      setTimeLeft(payload.timeLeft || 50);
+      setIsPlayerMoving(false);
+      setPlayerPosition(0);
+      setHostLoopKey(prev => prev + 1);
+      resetHostLoop();
+      
+      // Reset player position
+      if (playerRef.current) {
+        playerRef.current.position.set(0, 0, -5);
+        playerRef.current.rotation.y = 0;
+      }
+      
+      // Reset presence
+      multiplayerManager.setSelfPresence({ isEliminated: false, isMoving: false });
+    };
+
     multiplayerManager.onEvent('PLAYERS_UPDATED', handlePlayersUpdate);
     multiplayerManager.onEvent('GAME_STATE_CHANGED', handleGameStateChange);
     multiplayerManager.onEvent('PLAYER_ELIMINATED', handlePlayerEliminated);
     multiplayerManager.onEvent('HOST_CHANGED', handleHostChange);
+    multiplayerManager.onEvent('GAME_RESET', handleGameReset);
 
     return () => {
       multiplayerManager.offEvent('PLAYERS_UPDATED', handlePlayersUpdate);
       multiplayerManager.offEvent('GAME_STATE_CHANGED', handleGameStateChange);
       multiplayerManager.offEvent('PLAYER_ELIMINATED', handlePlayerEliminated);
       multiplayerManager.offEvent('HOST_CHANGED', handleHostChange);
+      multiplayerManager.offEvent('GAME_RESET', handleGameReset);
     };
   }, [self.id]);
 
