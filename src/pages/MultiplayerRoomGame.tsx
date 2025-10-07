@@ -273,6 +273,123 @@ export default function MultiplayerRoomGame() {
     console.log(`Audio ${newMutedState ? 'muted' : 'unmuted'}`);
   };
 
+  // Play footsteps when player is moving
+  useEffect(() => {
+    const footstepsAudio = audioRef.current.footsteps;
+    if (!footstepsAudio) return;
+
+    if (isPlayerMoving && gameState === 'playing') {
+      if (footstepsAudio.paused) {
+        footstepsAudio.currentTime = 0;
+        footstepsAudio.play().catch(() => {
+          console.log('Footsteps audio play failed (autoplay restrictions)');
+        });
+      }
+    } else {
+      if (!footstepsAudio.paused) {
+        footstepsAudio.pause();
+        footstepsAudio.currentTime = 0;
+      }
+    }
+
+    return () => {
+      if (footstepsAudio && !footstepsAudio.paused) {
+        footstepsAudio.pause();
+        footstepsAudio.currentTime = 0;
+      }
+    };
+  }, [isPlayerMoving, gameState]);
+
+  // Play light state sounds
+  useEffect(() => {
+    if (gameState !== 'playing') return;
+
+    const greenLightAudio = audioRef.current.greenLight;
+    const redLightAudio = audioRef.current.redLight;
+
+    if (lightState === 'green' && greenLightAudio) {
+      greenLightAudio.currentTime = 0;
+      greenLightAudio.play().catch(() => {
+        console.log('Green light audio play failed (autoplay restrictions)');
+      });
+    } else if (lightState === 'red' && redLightAudio) {
+      redLightAudio.currentTime = 0;
+      redLightAudio.play().catch(() => {
+        console.log('Red light audio play failed (autoplay restrictions)');
+      });
+    }
+  }, [lightState, gameState]);
+
+  // Play buzzer sound when player is eliminated
+  useEffect(() => {
+    if (selfElim) {
+      const buzzerAudio = audioRef.current.buzzer;
+      if (buzzerAudio && buzzerAudio.src) {
+        buzzerAudio.currentTime = 0;
+        buzzerAudio.play().catch(() => {
+          console.log('Buzzer audio play failed (autoplay restrictions)');
+        });
+      }
+    }
+  }, [selfElim]);
+
+  // Play win sound when player wins
+  useEffect(() => {
+    if (selfWon) {
+      const youWinAudio = audioRef.current.youWin;
+      if (youWinAudio && youWinAudio.src) {
+        youWinAudio.currentTime = 0;
+        youWinAudio.play().catch(() => {
+          console.log('You win audio play failed (autoplay restrictions)');
+        });
+      }
+    }
+  }, [selfWon]);
+
+  // Tug of War audio effects
+  useEffect(() => {
+    if (gameType !== 'tug-of-war') return;
+
+    // Play tug sound when pulling in Tug of War
+    const tugSound = audioRef.current.footsteps; // Reuse footsteps for tugging
+    if (tugSound) {
+      tugSound.loop = true;
+      tugSound.volume = 0.4;
+    }
+  }, [gameType]);
+
+  // Play tug sound when pulling in Tug of War
+  useEffect(() => {
+    if (gameType !== 'tug-of-war') return;
+
+    const tugSound = audioRef.current.footsteps;
+    if (!tugSound) return;
+
+    // Check if player is pulling (this would need to be tracked in the Tug of War component)
+    const isPulling = false; // This should be passed from the Tug of War component
+    
+    if (isPulling && gameState === 'playing') {
+      if (tugSound.paused) {
+        tugSound.currentTime = 0;
+        tugSound.play().catch(() => {
+          console.log('Tug sound play failed (autoplay restrictions)');
+        });
+      }
+    } else {
+      if (!tugSound.paused) {
+        tugSound.pause();
+        tugSound.currentTime = 0;
+      }
+    }
+
+    return () => {
+      if (tugSound && !tugSound.paused) {
+        tugSound.pause();
+        tugSound.currentTime = 0;
+      }
+    };
+  }, [gameType, gameState]);
+
   // Spacebar cycles camera modes - same as single player
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
