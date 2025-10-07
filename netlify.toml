@@ -1,40 +1,15 @@
-#  Netlify Configuration for Vite + Supabase
-# ─────────────────────────────────────────────
 [build]
-  command = "npm run build"          # Standard Vite build command
-  publish = "dist"                   # Output directory after build
+  # Match your Netlify build command
+  command = "bun run build"
+  # Vite outputs to "dist" by default
+  publish = "dist"
 
-# ─────────────────────────────────────────────
-#  Environment Variables (safe and hidden)
-# ─────────────────────────────────────────────
-[build.environment]
-  VITE_SUPABASE_URL = "YOUR_SUPABASE_URL"
-  VITE_SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY"
+  # Allow listing specific client-side env keys to ignore in secret scanning
+  [build.environment]
+    SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY"
 
-# ─────────────────────────────────────────────
-#  Security and post-processing
-# ─────────────────────────────────────────────
-[build.processing]
-  secrets_scan_enabled = true        # Keep secrets scanning ON
-
-# ─────────────────────────────────────────────
-#  Redirects for Single Page Apps (Vite, React, Vue)
-# ─────────────────────────────────────────────
+# SPA routing: send all routes to index.html so React Router can handle them
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-# ─────────────────────────────────────────────
-#  Asset optimization (optional)
-# ─────────────────────────────────────────────
-[build.processing.css]
-  bundle = true
-  minify = true
-
-[build.processing.js]
-  bundle = true
-  minify = true
-
-[build.processing.images]
-  compress = true
