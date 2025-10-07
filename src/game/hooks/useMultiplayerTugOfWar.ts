@@ -476,14 +476,45 @@ export const useMultiplayerTugOfWar = () => {
       });
       return;
     } else if (effectiveRopePosition === 'center') {
-      console.log('🏁 Timeout rope status (computed): center → Tie, no winners');
-      setWinners([]);
+      // Use last known leading side as a deterministic tiebreaker when rope looks centered
+      let leadingSide = lastLeadingSideRef.current;
+      let winningPlayers: string[] = [];
+
+      // If no recorded leading side, derive from current pull effort
+      if (!leadingSide) {
+        const redPull = redTeamPlayers.reduce((sum, p) => sum + (p.isPulling ? p.pullStrength : 0), 0);
+        const greenPull = greenTeamPlayers.reduce((sum, p) => sum + (p.isPulling ? p.pullStrength : 0), 0);
+        if (redPull > greenPull) leadingSide = 'red';
+        else if (greenPull > redPull) leadingSide = 'green';
+      }
+
+      // If still no leader (no one pulling), use average team positions (closest to center wins)
+      if (!leadingSide) {
+        const leftAvgPos = redTeamPlayers.length > 0 ? redTeamPlayers.reduce((s, p) => s + p.position, 0) / redTeamPlayers.length : -Infinity;
+        const rightAvgPos = greenTeamPlayers.length > 0 ? greenTeamPlayers.reduce((s, p) => s + p.position, 0) / greenTeamPlayers.length : Infinity;
+        // If the center point skews left, favor red; if right, favor green
+        const centerPoint = (leftAvgPos + rightAvgPos) / 2;
+        if (centerPoint < 0) leadingSide = 'red';
+        else if (centerPoint > 0) leadingSide = 'green';
+      }
+
+      if (leadingSide === 'red') {
+        winningPlayers = redTeamPlayers.map(p => p.id);
+        console.log('🏁 Timeout rope status: center, derived tiebreaker → Red team wins');
+      } else if (leadingSide === 'green') {
+        winningPlayers = greenTeamPlayers.map(p => p.id);
+        console.log('🏁 Timeout rope status: center, derived tiebreaker → Green team wins');
+      } else {
+        console.log('🏁 Timeout rope status: center and could not derive leader → Tie, no winners');
+      }
+
+      setWinners(winningPlayers);
       setEnded(true);
       setGameState('won');
       multiplayerManager.broadcast('game_state_changed', {
         gameState: 'won',
         ended: true,
-        winners: [],
+        winners: winningPlayers,
         tugOfWar: true
       });
       return;

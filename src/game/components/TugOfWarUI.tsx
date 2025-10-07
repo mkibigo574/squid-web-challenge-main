@@ -160,7 +160,7 @@ export const TugOfWarUI = ({
             <div className="text-2xl mb-6">
               {winners.length > 0
                 ? `Team '${getWinningTeamName()}' Won!`
-                : (ropePosition === 'center' ? 'No Winners in this Round!' : 'Game Ended!')}
+                : (ropePosition === 'center' ? 'The Red Team Won!' : 'Game Ended!')}
             </div>
             {winners.length > 0 && (
               <div className="text-lg mb-4">
