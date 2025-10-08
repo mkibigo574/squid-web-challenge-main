@@ -115,18 +115,33 @@ export const TugOfWarPlayer = ({
     const restoringForce = (targetSide - currentPos) * restoringStrength;
     totalForce += restoringForce;
     
-    // 2. Pulling force - when this player is pulling, move away from center
+    // 2. Pulling force - when this player is pulling, move away from center (enhanced)
     if (isPulling) {
-      const pullForce = teamSide === 'left' ? -pullStrength * 1.5 : pullStrength * 1.5;
+      const pullForce = teamSide === 'left' ? -pullStrength * 2.5 : pullStrength * 2.5;
       totalForce += pullForce;
     }
     
-    // 3. Opponent pulling force - when opponent is pulling, this player gets pulled towards center
+    // 3. Opponent pulling force - when opponent is pulling, this player gets pulled towards center (enhanced)
     // This is the key mechanic: when one team pulls, the other team gets pulled toward center
     if (ropePosition !== 'center') {
-      const opponentPullStrength = 0.4;
+      const opponentPullStrength = 0.8; // Increased from 0.4
       const opponentPullForce = teamSide === 'left' ? opponentPullStrength : -opponentPullStrength;
       totalForce += opponentPullForce;
+    }
+    
+    // 4. Rope position influence - when rope moves, players should move accordingly
+    if (ropePosition === 'right' && teamSide === 'right') {
+      // Right team is winning, move further right
+      totalForce += 0.6;
+    } else if (ropePosition === 'right' && teamSide === 'left') {
+      // Left team is losing, move closer to center
+      totalForce += 0.4;
+    } else if (ropePosition === 'left' && teamSide === 'left') {
+      // Left team is winning, move further left
+      totalForce -= 0.6;
+    } else if (ropePosition === 'left' && teamSide === 'right') {
+      // Right team is losing, move closer to center
+      totalForce -= 0.4;
     }
     
     // Apply physics with momentum
@@ -134,13 +149,26 @@ export const TugOfWarPlayer = ({
     const newVelocity = (velocity + totalForce * delta * 20) * friction;
     const newPosition = currentPos + newVelocity * delta * 20;
     
-    // Clamp position to reasonable bounds (prevent going too far from center)
-    const clampedPosition = Math.max(-7, Math.min(7, newPosition));
-    
-    // Update position
-    groupRef.current.position.x = clampedPosition;
-    setVelocity(newVelocity);
-    setPosition(clampedPosition);
+    // Check for elimination - if player gets too close to center gap
+    const centerGapThreshold = 1.5; // Distance from center where players fall
+    if (Math.abs(newPosition) < centerGapThreshold) {
+      // Player falls through the gap - start falling animation
+      const fallVelocity = -5; // Fast fall
+      groupRef.current.position.y += fallVelocity * delta;
+      
+      // If fallen below surface, mark as eliminated
+      if (groupRef.current.position.y < 0) {
+        // Trigger elimination logic here
+        console.log('Player eliminated by falling through gap!');
+      }
+    } else {
+      // Normal movement on elevated surface
+      const clampedPosition = Math.max(-10, Math.min(10, newPosition));
+      groupRef.current.position.x = clampedPosition;
+      groupRef.current.position.y = 1.5; // Keep on elevated surface
+      setVelocity(newVelocity);
+      setPosition(clampedPosition);
+    }
     
     // Notify parent of position change
     if (onPositionUpdate) {
@@ -153,12 +181,12 @@ export const TugOfWarPlayer = ({
     }
   });
 
-  // Reset position when game resets
+  // Reset position when game resets - on elevated surface
   useEffect(() => {
     if (gameState === 'waiting' || gameState === 'countdown') {
       const resetPosition = teamSide === 'left' ? -6 : 6;
       if (groupRef.current) {
-        groupRef.current.position.set(resetPosition, 0, 0);
+        groupRef.current.position.set(resetPosition, 1.5, 0); // Elevated surface
       }
       setPosition(resetPosition);
       setVelocity(0);

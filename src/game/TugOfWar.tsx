@@ -88,10 +88,10 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
     // TODO: Add proper Tug of War specific sounds
   }, [countdown, gameState]);
 
-  // Camera rig with multiple modes
-  type CameraMode = 'follow' | 'closeup' | 'drone' | 'side';
-  const FollowCamera = ({ targetRef, cameraMode }: { targetRef: React.RefObject<THREE.Group>; cameraMode: CameraMode }) => {
+  // Squid Game style camera - optimized for tug of war viewing
+  const SquidGameCamera = () => {
     const { camera } = useThree();
+    
     useEffect(() => {
       const cam = camera as THREE.PerspectiveCamera;
       cam.near = 0.1;
@@ -102,67 +102,32 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
     useEffect(() => {
       let raf = 0;
       const update = () => {
-        const target = targetRef.current;
-        if (target) {
-          const worldPos = target.position.clone();
-          let desiredPos = camera.position.clone();
-          let lookAt = new THREE.Vector3();
-          const cam = camera as THREE.PerspectiveCamera;
-          let targetFov = cam.fov;
-
-          if (cameraMode === 'follow') {
-            // Follow from behind and slightly above
-            desiredPos = worldPos.clone().add(new THREE.Vector3(0, 4, -8));
-            lookAt = worldPos.clone().add(new THREE.Vector3(0, 0, 0));
-            targetFov = 50;
-          } else if (cameraMode === 'closeup') {
-            // Close-up side view
-            desiredPos = worldPos.clone().add(new THREE.Vector3(3, 2, 0));
-            lookAt = worldPos.clone().add(new THREE.Vector3(0, 1, 0));
-            targetFov = 40;
-          } else if (cameraMode === 'drone') {
-            // Top-down view
-            desiredPos = new THREE.Vector3(0, 20, 0);
-            lookAt = new THREE.Vector3(0, 0, 0);
-            targetFov = 60;
-          } else {
-            // Side view for tug of war
-            desiredPos = new THREE.Vector3(8, 3, 0);
-            lookAt = new THREE.Vector3(0, 0, 0);
-            targetFov = 45;
-          }
-
-          cam.position.lerp(desiredPos, 0.12);
-          cam.lookAt(lookAt);
-
-          cam.fov += (targetFov - cam.fov) * 0.1;
-          cam.updateProjectionMatrix();
-        }
+        const cam = camera as THREE.PerspectiveCamera;
+        
+        // Squid Game style: Side view showing both teams clearly
+        const desiredPos = new THREE.Vector3(0, 6, 12); // Elevated side view
+        const lookAt = new THREE.Vector3(0, 1, 0); // Look at center of field
+        
+        // Smooth camera movement
+        cam.position.lerp(desiredPos, 0.05);
+        cam.lookAt(lookAt);
+        
+        // Set FOV for optimal tug of war viewing
+        const targetFov = 65;
+        cam.fov += (targetFov - cam.fov) * 0.1;
+        cam.updateProjectionMatrix();
+        
         raf = requestAnimationFrame(update);
       };
       raf = requestAnimationFrame(update);
       return () => cancelAnimationFrame(raf);
-    }, [camera, targetRef, cameraMode]);
+    }, [camera]);
+    
     return null;
   };
 
   // Stable ref for player to follow
   const playerRef = useRef<THREE.Group>(null);
-  const [cameraMode, setCameraMode] = useState<CameraMode>('side');
-
-  // Camera mode switching with 'C' key (removed spacebar to avoid conflict with rope pulling)
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'KeyC') {
-        e.preventDefault();
-        setCameraMode((mode) =>
-          mode === 'follow' ? 'closeup' : mode === 'closeup' ? 'drone' : mode === 'drone' ? 'side' : 'follow'
-        );
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
 
   // Handle keyboard input for tugging
   useEffect(() => {
@@ -193,7 +158,7 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
   }, [gameState, pullRope, releaseRope]);
 
   return (
-    <div className="w-full h-screen relative bg-gradient-to-b from-orange-400 to-red-600">
+    <div className="w-full h-screen relative bg-gray-900">
       {/* Level Progression */}
       <LevelProgression 
         onLevelChange={onLevelChange || (() => {})}
@@ -204,14 +169,14 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
       <Canvas
         shadows
         camera={{ 
-          position: [8, 3, 0],
-          fov: 45,
+          position: [0, 6, 12],
+          fov: 60,
           near: 0.1,
-          far: 300
+          far: 500
         }}
       >
-        {/* Camera rig; press C to cycle modes */}
-        <FollowCamera targetRef={playerRef} cameraMode={cameraMode} />
+        {/* Squid Game style camera */}
+        <SquidGameCamera />
         <ambientLight intensity={0.6} />
         <directionalLight position={[5, 10, -5]} intensity={0.8} castShadow />
         

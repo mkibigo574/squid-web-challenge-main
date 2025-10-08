@@ -89,8 +89,8 @@ export const TugOfWarRope = ({ ropePosition, gameState, pullStrength = 0, isPull
 
   return (
     <group>
-      {/* Moving rope group */}
-      <group ref={ropeRef} position={[0, 1, 0]}>
+      {/* Moving rope group - on elevated surface */}
+      <group ref={ropeRef} position={[0, 1.5, 0]}>
         {/* Main rope with real-time sections */}
         <group>
         {Array.from({ length: ropeSegments }, (_, i) => {
@@ -113,27 +113,39 @@ export const TugOfWarRope = ({ ropePosition, gameState, pullStrength = 0, isPull
         })}
         </group>
 
-        {/* Rope handles with team colors */}
+        {/* Rope handles with team colors - Enhanced Squid Game style */}
         <group ref={leftHandleRef} position={[-6, 0, 0]}>
+          {/* Red Team Handle */}
           <mesh>
-            <cylinderGeometry args={[0.2, 0.2, 0.4]} />
-            <meshStandardMaterial color="#FF4444" />
+            <cylinderGeometry args={[0.3, 0.3, 0.6]} />
+            <meshStandardMaterial color="#DC143C" />
           </mesh>
           {/* Red Team Label */}
-          <mesh position={[0, 1.5, 0]}>
-            <planeGeometry args={[1, 0.3]} />
-            <meshStandardMaterial color="#FF4444" transparent opacity={0.8} />
+          <mesh position={[0, 2, 0]}>
+            <planeGeometry args={[1.5, 0.4]} />
+            <meshStandardMaterial color="#DC143C" transparent opacity={0.9} />
+          </mesh>
+          {/* Red Team Text */}
+          <mesh position={[0, 2.2, 0.01]}>
+            <planeGeometry args={[1.2, 0.2]} />
+            <meshStandardMaterial color="#FFFFFF" transparent opacity={0.8} />
           </mesh>
         </group>
         <group ref={rightHandleRef} position={[6, 0, 0]}>
+          {/* Green Team Handle */}
           <mesh>
-            <cylinderGeometry args={[0.2, 0.2, 0.4]} />
-            <meshStandardMaterial color="#44FF44" />
+            <cylinderGeometry args={[0.3, 0.3, 0.6]} />
+            <meshStandardMaterial color="#32CD32" />
           </mesh>
           {/* Green Team Label */}
-          <mesh position={[0, 1.5, 0]}>
-            <planeGeometry args={[1, 0.3]} />
-            <meshStandardMaterial color="#44FF44" transparent opacity={0.8} />
+          <mesh position={[0, 2, 0]}>
+            <planeGeometry args={[1.5, 0.4]} />
+            <meshStandardMaterial color="#32CD32" transparent opacity={0.9} />
+          </mesh>
+          {/* Green Team Text */}
+          <mesh position={[0, 2.2, 0.01]}>
+            <planeGeometry args={[1.2, 0.2]} />
+            <meshStandardMaterial color="#FFFFFF" transparent opacity={0.8} />
           </mesh>
         </group>
 

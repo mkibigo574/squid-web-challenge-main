@@ -34,7 +34,6 @@ export const MultiplayerTugOfWar = () => {
   const audioRef = useRef<{ [key: string]: HTMLAudioElement }>({});
   const [isPlayerPulling, setIsPlayerPulling] = useState(false);
   const [currentPlayerId, setCurrentPlayerId] = useState<string>('unknown');
-  const [cameraMode, setCameraMode] = useState<'overview' | 'closeup' | 'follow_rope'>('overview');
 
   // Get current player ID and update it when it changes
   useEffect(() => {
@@ -116,75 +115,56 @@ export const MultiplayerTugOfWar = () => {
     // TODO: Add proper Tug of War specific sounds
   }, [gameState, ended]);
 
-  // Enhanced camera controller with multiple modes
-  const CameraController = () => {
+  // Squid Game style camera for multiplayer
+  const SquidGameCamera = () => {
     const { camera } = useThree();
     
     useEffect(() => {
       const cam = camera as THREE.PerspectiveCamera;
-      cam.fov = 60;
       cam.near = 0.1;
       cam.far = 1000;
       cam.updateProjectionMatrix();
     }, [camera]);
 
-    // Handle camera mode switching
     useEffect(() => {
-      const handleKeyPress = (event: KeyboardEvent) => {
-        if (event.code === 'KeyC') {
-          setCameraMode(prev => {
-            const modes = ['overview', 'closeup', 'follow_rope'] as const;
-            const currentIndex = modes.indexOf(prev);
-            const nextIndex = (currentIndex + 1) % modes.length;
-            return modes[nextIndex];
-          });
-        }
+      let raf = 0;
+      const update = () => {
+        const cam = camera as THREE.PerspectiveCamera;
+        
+        // Squid Game style: Side view showing both teams clearly
+        const desiredPos = new THREE.Vector3(0, 6, 12); // Elevated side view
+        const lookAt = new THREE.Vector3(0, 1, 0); // Look at center of field
+        
+        // Smooth camera movement
+        cam.position.lerp(desiredPos, 0.05);
+        cam.lookAt(lookAt);
+        
+        // Set FOV for optimal tug of war viewing
+        const targetFov = 65;
+        cam.fov += (targetFov - cam.fov) * 0.1;
+        cam.updateProjectionMatrix();
+        
+        raf = requestAnimationFrame(update);
       };
-
-      window.addEventListener('keydown', handleKeyPress);
-      return () => window.removeEventListener('keydown', handleKeyPress);
-    }, []);
-
-    // Update camera position based on mode
-    useEffect(() => {
-      const cam = camera as THREE.PerspectiveCamera;
-      
-      if (cameraMode === 'overview') {
-        // Full field view - can see entire rope, both teams, and board
-        cam.position.set(0, 15, 12);
-        cam.lookAt(0, 0, 0);
-        cam.fov = 75; // Wide FOV to see more
-      } else if (cameraMode === 'closeup') {
-        // Closer view of the action
-        cam.position.set(0, 8, 6);
-        cam.lookAt(0, 0, 0);
-        cam.fov = 50;
-      } else if (cameraMode === 'follow_rope') {
-        // Dynamic view that follows the rope movement
-        const ropeOffset = ropePosition === 'left' ? -2 : ropePosition === 'right' ? 2 : 0;
-        cam.position.set(ropeOffset, 10, 8);
-        cam.lookAt(ropeOffset, 0, 0);
-        cam.fov = 60;
-      }
-      
-      cam.updateProjectionMatrix();
-    }, [camera, cameraMode, ropePosition]);
-
+      raf = requestAnimationFrame(update);
+      return () => cancelAnimationFrame(raf);
+    }, [camera]);
+    
     return null;
   };
 
   return (
-    <div className="w-full h-screen relative bg-gradient-to-b from-orange-400 to-red-600">
+    <div className="w-full h-screen relative bg-gray-900">
       <Canvas
         shadows
         camera={{
-          position: [0, 15, 12],
-          fov: 75,
+          position: [0, 6, 12],
+          fov: 60,
           near: 0.1,
           far: 1000
         }}
       >
-        <CameraController />
+        <SquidGameCamera />
         
         {/* Lighting */}
         <ambientLight intensity={0.4} />
@@ -212,29 +192,36 @@ export const MultiplayerTugOfWar = () => {
         />
         
         {/* Players */}
-        {players.map((player, index) => (
-          <TugOfWarPlayer
-            key={player.id}
-            gameState={gameState}
-            isPulling={player.isPulling}
-            pullStrength={player.pullStrength}
-            ropePosition={ropePosition}
-            teamSide={index % 2 === 0 ? 'left' : 'right'}
-            modelPath={MODEL_CONFIG.player.path}
-            onPositionUpdate={(pos) => {
-              // Update player position in the players array
-              setPlayers(prev => prev.map(p => 
-                p.id === player.id ? { ...p, position: pos } : p
-              ));
-            }}
-            onPullForce={(force) => {
-              // Update player pull force
-              setPlayers(prev => prev.map(p => 
-                p.id === player.id ? { ...p, pullForce: force } : p
-              ));
-            }}
-          />
-        ))}
+        {players.map((player, index) => {
+          const teamSide = index % 2 === 0 ? 'left' : 'right';
+          const basePosition = teamSide === 'left' ? -6 : 6;
+          const sideOffset = index % 2 === 0 ? -1 : 1; // Alternate sides
+          
+          return (
+            <group key={player.id} position={[basePosition + sideOffset, 0, 0]}>
+              <TugOfWarPlayer
+                gameState={gameState}
+                isPulling={player.isPulling}
+                pullStrength={player.pullStrength}
+                ropePosition={ropePosition}
+                teamSide={teamSide}
+                modelPath={MODEL_CONFIG.player.path}
+                onPositionUpdate={(pos) => {
+                  // Update player position in the players array
+                  setPlayers(prev => prev.map(p => 
+                    p.id === player.id ? { ...p, position: pos } : p
+                  ));
+                }}
+                onPullForce={(force) => {
+                  // Update player pull force
+                  setPlayers(prev => prev.map(p => 
+                    p.id === player.id ? { ...p, pullForce: force } : p
+                  ));
+                }}
+              />
+            </group>
+          );
+        })}
         
         {/* Celebration effect */}
         {(gameState === 'won' || ended) && (
@@ -277,23 +264,12 @@ export const MultiplayerTugOfWar = () => {
       />
 
       {/* Instructions */}
-      <div className="absolute bottom-4 left-4 text-white bg-black/50 p-3 rounded-lg">
-        <div className="text-sm font-semibold mb-2">Controls:</div>
+      <div className="absolute bottom-4 left-4 text-white bg-red-900/80 p-3 rounded-lg border-2 border-red-600">
+        <div className="text-sm font-semibold mb-2 text-red-200">🔴 SQUID GAME CONTROLS:</div>
         <div className="text-xs space-y-1">
-          <div>Hold <kbd className="bg-gray-700 px-1 rounded">SPACE</kbd> to pull the rope</div>
-          <div>Release <kbd className="bg-gray-700 px-1 rounded">SPACE</kbd> to stop pulling</div>
-          <div>Press <kbd className="bg-gray-700 px-1 rounded">C</kbd> to cycle camera modes</div>
-          <div>Mouse: Rotate, Scroll: Zoom, Drag: Pan</div>
-        </div>
-      </div>
-
-      {/* Camera Mode Indicator */}
-      <div className="absolute top-4 left-4 text-white bg-black/50 p-3 rounded-lg">
-        <div className="text-sm font-semibold mb-1">Camera Mode:</div>
-        <div className="text-xs">
-          {cameraMode === 'overview' && '📹 Overview (Full Field)'}
-          {cameraMode === 'closeup' && '🔍 Close-up (Action View)'}
-          {cameraMode === 'follow_rope' && '🎯 Follow Rope (Dynamic)'}
+          <div>Hold <kbd className="bg-red-700 px-1 rounded">SPACE</kbd> to pull the rope</div>
+          <div>Release <kbd className="bg-red-700 px-1 rounded">SPACE</kbd> to stop pulling</div>
+          <div>⚠️ Don't get pulled into the gap! ⚠️</div>
         </div>
       </div>
 

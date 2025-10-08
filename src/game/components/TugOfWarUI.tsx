@@ -106,12 +106,12 @@ export const TugOfWarUI = ({
 
   return (
     <div className="absolute inset-0 pointer-events-none">
-      {/* Game Status */}
-      <div className="absolute top-4 left-4 bg-black/80 rounded-lg p-4 text-white">
-        <div className="text-lg font-bold mb-2">Tug of War</div>
+      {/* Game Status - Squid Game Style */}
+      <div className="absolute top-4 left-4 bg-red-900/90 rounded-lg p-4 text-white border-2 border-red-600">
+        <div className="text-xl font-bold mb-2 text-red-200">🔴 SQUID GAME: TUG OF WAR</div>
         <div className="text-sm space-y-1">
-          <div>Status: <span className="font-semibold">{gameState}</span></div>
-          <div>Time: <span className="font-semibold">{Math.ceil(timeLeft)}s</span></div>
+          <div>Status: <span className="font-semibold text-yellow-300">{gameState.toUpperCase()}</span></div>
+          <div>Time: <span className="font-semibold text-red-300">{Math.ceil(timeLeft)}s</span></div>
           {(() => { const s = getRopeStatus(); return (
             <div>Rope: <span className={`font-semibold ${s.color}`}>{s.text}</span></div>
           ); })()}
@@ -136,50 +136,52 @@ export const TugOfWarUI = ({
         </div>
       )}
 
-      {/* Game Over Screen */}
+      {/* Game Over Screen - Squid Game Style */}
       {gameState === 'eliminated' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-red-900/80">
+        <div className="absolute inset-0 flex items-center justify-center bg-red-900/95">
           <div className="text-center text-white">
-            <div className="text-6xl font-bold mb-4">GAME OVER</div>
-            <div className="text-2xl mb-6">You lost the tug of war!</div>
+            <div className="text-8xl font-bold mb-4 text-red-300 animate-pulse">💀 ELIMINATED</div>
+            <div className="text-3xl mb-6 text-red-200">You fell through the gap!</div>
+            <div className="text-xl mb-8 text-yellow-300">You were pulled too close to the center... Game Over</div>
             <button
-              className="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-semibold pointer-events-auto"
+              className="px-8 py-4 bg-red-700 hover:bg-red-800 rounded-lg text-xl font-bold pointer-events-auto border-2 border-red-500"
               onClick={onResetGame}
             >
-              Try Again
+              🔄 Try Again
             </button>
           </div>
         </div>
       )}
 
-      {/* Victory Screen - Simple approach that works */}
+      {/* Victory Screen - Squid Game Style */}
       {(gameState === 'won' || ended) && (
-        <div className="absolute inset-0 flex items-center justify-center bg-green-900/80">
+        <div className="absolute inset-0 flex items-center justify-center bg-green-900/95">
           <div className="text-center text-white">
-            <div className="text-6xl font-bold mb-4">VICTORY!</div>
-            <div className="text-2xl mb-6">
+            <div className="text-8xl font-bold mb-4 text-green-300 animate-pulse">🏆 VICTORY!</div>
+            <div className="text-3xl mb-6 text-green-200">
               {winners.length > 0
-                ? `Team '${getWinningTeamName()}' Won!`
-                : (ropePosition === 'center' ? 'The Red Team Won!' : 'Game Ended!')}
+                ? `Team '${getWinningTeamName()}' Survived!`
+                : (ropePosition === 'center' ? 'You Survived the Guillotine!' : 'Game Ended!')}
             </div>
+            <div className="text-xl mb-8 text-yellow-300">You pulled the other team into the gap!</div>
             {winners.length > 0 && (
-              <div className="text-lg mb-4">
-                Winners: {winnerNames.join(', ')}
+              <div className="text-lg mb-4 text-green-300">
+                Survivors: {winnerNames.join(', ')}
               </div>
             )}
             <div className="space-x-4">
               <button
-                className="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold pointer-events-auto"
+                className="px-8 py-4 bg-green-700 hover:bg-green-800 rounded-lg text-xl font-bold pointer-events-auto border-2 border-green-500"
                 onClick={onResetGame}
               >
-                Play Again
+                🔄 Play Again
               </button>
               {onNextLevel && (
                 <button
-                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold pointer-events-auto"
+                  className="px-8 py-4 bg-blue-700 hover:bg-blue-800 rounded-lg text-xl font-bold pointer-events-auto border-2 border-blue-500"
                   onClick={onNextLevel}
                 >
-                  Next Level
+                  ➡️ Next Level
                 </button>
               )}
             </div>
@@ -187,17 +189,19 @@ export const TugOfWarUI = ({
         </div>
       )}
 
-      {/* Start Game Button */}
+      {/* Start Game Button - Squid Game Style */}
       {gameState === 'waiting' && isHost && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+        <div className="absolute inset-0 flex items-center justify-center bg-red-900/80">
           <div className="text-center text-white">
-            <div className="text-4xl font-bold mb-6">Tug of War</div>
-            <div className="text-xl mb-8">Pull the rope to your side to win!</div>
+            <div className="text-6xl font-bold mb-6 text-red-300">🔴 SQUID GAME</div>
+            <div className="text-3xl font-bold mb-4 text-yellow-300">TUG OF WAR</div>
+            <div className="text-xl mb-8 text-red-200">Pull the rope to your side to survive!</div>
+            <div className="text-lg mb-8 text-yellow-300">⚠️ Warning: Gap in center - don't fall through! ⚠️</div>
             <button
-              className="px-8 py-4 bg-green-600 hover:bg-green-700 rounded-lg text-xl font-semibold pointer-events-auto"
+              className="px-12 py-6 bg-red-700 hover:bg-red-800 rounded-lg text-2xl font-bold pointer-events-auto border-4 border-red-500 animate-pulse"
               onClick={onStartGame}
             >
-              Start Game
+              🎮 START GAME
             </button>
           </div>
         </div>
