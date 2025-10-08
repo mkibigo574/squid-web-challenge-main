@@ -150,10 +150,10 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
   const playerRef = useRef<THREE.Group>(null);
   const [cameraMode, setCameraMode] = useState<CameraMode>('side');
 
-  // Spacebar cycles camera modes
+  // Camera mode switching with 'C' key (removed spacebar to avoid conflict with rope pulling)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
+      if (e.code === 'KeyC') {
         e.preventDefault();
         setCameraMode((mode) =>
           mode === 'follow' ? 'closeup' : mode === 'closeup' ? 'drone' : mode === 'drone' ? 'side' : 'follow'
@@ -168,7 +168,7 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (gameState === 'playing') {
-        if (e.code === 'KeyW' || e.code === 'ArrowUp') {
+        if (e.code === 'KeyW' || e.code === 'ArrowUp' || e.code === 'Space') {
           e.preventDefault();
           pullRope();
           setIsPlayerPulling(true);
@@ -177,7 +177,7 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'KeyW' || e.code === 'ArrowUp') {
+      if (e.code === 'KeyW' || e.code === 'ArrowUp' || e.code === 'Space') {
         e.preventDefault();
         releaseRope();
         setIsPlayerPulling(false);
@@ -210,7 +210,7 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
           far: 300
         }}
       >
-        {/* Camera rig; press Space to cycle modes */}
+        {/* Camera rig; press C to cycle modes */}
         <FollowCamera targetRef={playerRef} cameraMode={cameraMode} />
         <ambientLight intensity={0.6} />
         <directionalLight position={[5, 10, -5]} intensity={0.8} castShadow />
@@ -240,8 +240,17 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
         timeLeft={timeLeft}
         countdown={countdown}
         ropePosition={ropePosition}
+        isPulling={isPulling}
+        pullStrength={0}
+        players={[]}
+        isHost={true}
+        winners={[]}
+        ended={false}
+        currentPlayerId={'local'}
         onStartGame={startGame}
         onResetGame={resetGame}
+        onPullRope={pullRope}
+        onReleaseRope={releaseRope}
         onNextLevel={() => {
           // This will be handled by the parent component
           console.log('Next level requested');

@@ -12,7 +12,7 @@ export const useTugOfWar = () => {
   const [isPulling, setIsPulling] = useState(false);
   const [pullStrength, setPullStrength] = useState(0);
   
-  const GAME_DURATION = 30;
+  const GAME_DURATION = 20;
   const PULL_STRENGTH_INCREASE = 0.02;
   const PULL_STRENGTH_DECAY = 0.01;
   const ROPE_MOVEMENT_THRESHOLD = 0.3;

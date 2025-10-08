@@ -30,6 +30,12 @@ const Lobby = () => {
   };
 
   const createMultiplayerRoom = () => {
+    // If Tug of War is selected, go directly to the Tug of War game page
+    if (gameType === 'tug-of-war') {
+      navigate('/game/tug-of-war');
+      return;
+    }
+
     const code = randomCode();
     navigate(`/room/${code}/multiplayer?name=${encodeURIComponent(name || 'Player')}&id=${encodeURIComponent(playerId)}&creator=true&gameType=${gameType}`);
   };
