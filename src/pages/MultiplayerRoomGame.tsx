@@ -286,10 +286,13 @@ export default function MultiplayerRoomGame() {
     console.log(`Audio ${newMutedState ? 'muted' : 'unmuted'}`);
   };
 
-  // Play footsteps when player is moving
+  // Play footsteps when player is moving - DISABLED for Tug of War
   useEffect(() => {
     const footstepsAudio = audioRef.current.footsteps;
     if (!footstepsAudio) return;
+
+    // Disable footsteps for Tug of War games
+    if (gameType === 'tug-of-war') return;
 
     if (isPlayerMoving && gameState === 'playing') {
       if (footstepsAudio.paused) {
@@ -311,11 +314,14 @@ export default function MultiplayerRoomGame() {
         footstepsAudio.currentTime = 0;
       }
     };
-  }, [isPlayerMoving, gameState]);
+  }, [isPlayerMoving, gameState, gameType]);
 
-  // Play light state sounds
+  // Play light state sounds - DISABLED for Tug of War
   useEffect(() => {
     if (gameState !== 'playing') return;
+    
+    // Disable sounds for Tug of War games
+    if (gameType === 'tug-of-war') return;
 
     const greenLightAudio = audioRef.current.greenLight;
     const redLightAudio = audioRef.current.redLight;
@@ -331,11 +337,14 @@ export default function MultiplayerRoomGame() {
         console.log('Red light audio play failed (autoplay restrictions)');
       });
     }
-  }, [lightState, gameState]);
+  }, [lightState, gameState, gameType]);
 
-  // Play buzzer sound when player is eliminated
+  // Play buzzer sound when player is eliminated - DISABLED for Tug of War
   useEffect(() => {
     if (selfElim) {
+      // Disable sounds for Tug of War games
+      if (gameType === 'tug-of-war') return;
+      
       const buzzerAudio = audioRef.current.buzzer;
       if (buzzerAudio && buzzerAudio.src) {
         buzzerAudio.currentTime = 0;
@@ -344,11 +353,14 @@ export default function MultiplayerRoomGame() {
         });
       }
     }
-  }, [selfElim]);
+  }, [selfElim, gameType]);
 
-  // Play win sound when player wins
+  // Play win sound when player wins - DISABLED for Tug of War
   useEffect(() => {
     if (selfWon) {
+      // Disable sounds for Tug of War games
+      if (gameType === 'tug-of-war') return;
+      
       const youWinAudio = audioRef.current.youWin;
       if (youWinAudio && youWinAudio.src) {
         youWinAudio.currentTime = 0;
@@ -357,7 +369,7 @@ export default function MultiplayerRoomGame() {
         });
       }
     }
-  }, [selfWon]);
+  }, [selfWon, gameType]);
 
   // Tug of War audio effects
   useEffect(() => {

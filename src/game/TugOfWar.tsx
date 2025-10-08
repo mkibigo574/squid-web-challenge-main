@@ -49,92 +49,43 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
     loadModels();
   }, []);
 
-  // Initialize audio
+  // Initialize audio - DISABLED for Tug of War until proper sounds are created
   useEffect(() => {
+    // Audio disabled for Tug of War game
+    // TODO: Add proper Tug of War specific sounds
     audioRef.current = {
-      tugSound: new Audio('/audio/Running%20footsteps.wav'), // Reuse footsteps for tugging
-      buzzer: new Audio('/audio/Buzzer.wav'),
-      youWin: new Audio('/audio/win_game.wav'),
-      countdown: new Audio('/audio/green_light.wav'), // Reuse green light for countdown
+      tugSound: null, // Disabled
+      buzzer: null, // Disabled
+      youWin: null, // Disabled
+      countdown: null, // Disabled
     };
-
-    // Configure audio
-    const tugSound = audioRef.current.tugSound;
-    tugSound.loop = true;
-    tugSound.volume = 0.4;
-    
-    const buzzerAudio = audioRef.current.buzzer;
-    buzzerAudio.volume = 0.8;
-    
-    const youWinAudio = audioRef.current.youWin;
-    youWinAudio.volume = 0.8;
-    
-    const countdownAudio = audioRef.current.countdown;
-    countdownAudio.volume = 0.7;
   }, []);
 
-  // Tugging sound management
+  // Tugging sound management - DISABLED
   useEffect(() => {
-    const tugSound = audioRef.current.tugSound;
-    
-    if (isPlayerPulling && gameState === 'playing') {
-      if (tugSound.paused) {
-        tugSound.currentTime = 0;
-        tugSound.play().catch(() => {
-          console.log('Tug sound play failed (autoplay restrictions)');
-        });
-      }
-    } else {
-      if (!tugSound.paused) {
-        tugSound.pause();
-        tugSound.currentTime = 0;
-      }
-    }
-
+    // Sound disabled for Tug of War game
+    // TODO: Add proper Tug of War specific sounds
     return () => {
-      if (tugSound && !tugSound.paused) {
-        tugSound.pause();
-        tugSound.currentTime = 0;
-      }
+      // Cleanup disabled
     };
   }, [isPlayerPulling, gameState]);
 
-  // Play buzzer sound when player loses
+  // Play buzzer sound when player loses - DISABLED
   useEffect(() => {
-    if (gameState === 'eliminated') {
-      const buzzerAudio = audioRef.current.buzzer;
-      if (buzzerAudio && buzzerAudio.src) {
-        buzzerAudio.currentTime = 0;
-        buzzerAudio.play().catch(() => {
-          console.log('Buzzer audio play failed (autoplay restrictions)');
-        });
-      }
-    }
+    // Sound disabled for Tug of War game
+    // TODO: Add proper Tug of War specific sounds
   }, [gameState]);
 
-  // Play win sound when player wins
+  // Play win sound when player wins - DISABLED
   useEffect(() => {
-    if (gameState === 'won') {
-      const youWinAudio = audioRef.current.youWin;
-      if (youWinAudio && youWinAudio.src) {
-        youWinAudio.currentTime = 0;
-        youWinAudio.play().catch(() => {
-          console.log('You win audio play failed (autoplay restrictions)');
-        });
-      }
-    }
+    // Sound disabled for Tug of War game
+    // TODO: Add proper Tug of War specific sounds
   }, [gameState]);
 
-  // Play countdown sound
+  // Play countdown sound - DISABLED
   useEffect(() => {
-    if (gameState === 'countdown' && countdown > 0) {
-      const countdownAudio = audioRef.current.countdown;
-      if (countdownAudio && countdownAudio.src) {
-        countdownAudio.play().catch(() => {
-          console.log('Countdown audio play failed (autoplay restrictions)');
-        });
-      }
-    }
+    // Sound disabled for Tug of War game
+    // TODO: Add proper Tug of War specific sounds
   }, [countdown, gameState]);
 
   // Camera rig with multiple modes

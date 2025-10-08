@@ -59,24 +59,18 @@ export const MultiplayerTugOfWar = () => {
     loadModels();
   }, []);
 
-  // Initialize audio
+  // Initialize audio - DISABLED for Tug of War until proper sounds are created
   useEffect(() => {
+    // Audio disabled for Tug of War game
+    // TODO: Add proper Tug of War specific sounds
     audioRef.current = {
-      pull: new Audio('/audio/pull_rope.wav'),
-      win: new Audio('/audio/win_game.wav'),
-      countdown: new Audio('/audio/countdown.wav')
+      pull: null, // Disabled
+      win: null, // Disabled
+      countdown: null // Disabled
     };
 
-    // Configure audio
-    Object.values(audioRef.current).forEach(audio => {
-      audio.volume = 0.7;
-    });
-
     return () => {
-      Object.values(audioRef.current).forEach(audio => {
-        audio.pause();
-        audio.currentTime = 0;
-      });
+      // Cleanup disabled
     };
   }, []);
 
@@ -110,28 +104,16 @@ export const MultiplayerTugOfWar = () => {
     };
   }, [gameState, pullRope, releaseRope]);
 
-  // Play audio cues
+  // Play audio cues - DISABLED
   useEffect(() => {
-    if (isPulling && gameState === 'playing') {
-      const pullAudio = audioRef.current.pull;
-      if (pullAudio && pullAudio.paused) {
-        pullAudio.play().catch(() => {
-          console.log('Pull audio play failed (autoplay restrictions)');
-        });
-      }
-    }
+    // Sound disabled for Tug of War game
+    // TODO: Add proper Tug of War specific sounds
   }, [isPulling, gameState]);
 
+  // Win sound effect - DISABLED
   useEffect(() => {
-    if (gameState === 'won' || ended) {
-      const winAudio = audioRef.current.win;
-      if (winAudio) {
-        winAudio.currentTime = 0;
-        winAudio.play().catch(() => {
-          console.log('Win audio play failed (autoplay restrictions)');
-        });
-      }
-    }
+    // Sound disabled for Tug of War game
+    // TODO: Add proper Tug of War specific sounds
   }, [gameState, ended]);
 
   // Enhanced camera controller with multiple modes
