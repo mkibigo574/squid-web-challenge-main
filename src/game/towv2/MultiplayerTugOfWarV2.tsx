@@ -61,7 +61,7 @@ function Rope({ value }: { value: number }) {
   );
 }
 
-function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as 'left'|'right', detached = false, floorY = BROWN_FLOOR_TOP_Y }) {
+function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as 'left'|'right', detached = false, floorY = BROWN_FLOOR_TOP_Y, playerIndex = 0 }) {
   const group = useRef<THREE.Group>(null);
   const leftHand = useRef<THREE.Mesh>(null);
   const rightHand = useRef<THREE.Mesh>(null);
@@ -93,8 +93,10 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       if (!hasDetachedRef.current) {
         hasDetachedRef.current = true;
         vyRef.current = -0.02;
-        // Set landing position to center of the gap
-        currentXRef.current = 0;
+        // Move to center gap area while maintaining relative positions
+        const spacing = 0.8; // same spacing as when on rope
+        const centerOffset = (playerIndex - 2.5) * spacing; // -2.5 to 2.5 range
+        currentXRef.current = centerOffset;
       }
       // Simple gravity
       vyRef.current -= 0.012; // gravity accel
@@ -173,10 +175,10 @@ function TeamPlayers({ rope, redEffort, blueEffort, detachedRed, detachedBlue }:
   return (
     <group>
       {leftOffsets.map((ox, i) => (
-        <SimplePlayer key={`L${i}`} x={ropeCenterX + ox} z={z} color="#dc2626" rotationY={0} effort={redEffort} side="left" detached={detachedRed} floorY={BROWN_FLOOR_TOP_Y} />
+        <SimplePlayer key={`L${i}`} x={ropeCenterX + ox} z={z} color="#dc2626" rotationY={0} effort={redEffort} side="left" detached={detachedRed} floorY={BROWN_FLOOR_TOP_Y} playerIndex={i} />
       ))}
       {rightOffsets.map((ox, i) => (
-        <SimplePlayer key={`R${i}`} x={ropeCenterX + ox} z={z} color="#16a34a" rotationY={Math.PI} effort={blueEffort} side="right" detached={detachedBlue} floorY={BROWN_FLOOR_TOP_Y} />
+        <SimplePlayer key={`R${i}`} x={ropeCenterX + ox} z={z} color="#16a34a" rotationY={Math.PI} effort={blueEffort} side="right" detached={detachedBlue} floorY={BROWN_FLOOR_TOP_Y} playerIndex={i + 3} />
       ))}
     </group>
   );
