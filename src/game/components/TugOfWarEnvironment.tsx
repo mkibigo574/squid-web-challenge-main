@@ -105,28 +105,40 @@ export const TugOfWarEnvironment = () => {
           <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
         </mesh>
         
-        {/* Helicopter-style blades */}
+        {/* Helicopter-style blades - identical to chainsaw */}
         {Array.from({ length: 4 }, (_, i) => {
           const angle = (i / 4) * Math.PI * 2;
           return (
             <group key={`blade-${i}`} rotation={[0, angle, 0]}>
-              {/* Main blade */}
-              <mesh position={[0, 0, 0]}>
-                <boxGeometry args={[0.1, 0.05, 6]} />
+              {/* Main blade - same as chainsaw cylinder */}
+              <mesh position={[0, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+                <cylinderGeometry args={[0.3, 0.3, 12]} />
                 <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
               </mesh>
-              {/* Blade tip with sharp edge */}
-              <mesh position={[0, 0, 3]}>
-                <boxGeometry args={[0.15, 0.08, 0.5]} />
-                <meshStandardMaterial color="#cc0000" metalness={0.9} roughness={0.1} />
-              </mesh>
-              {/* Sharp teeth along blade edge */}
-              {Array.from({ length: 8 }, (_, j) => (
-                <mesh key={`blade-tooth-${j}`} position={[0, 0, -2.5 + j * 0.7]}>
-                  <coneGeometry args={[0.02, 0.1, 4]} />
-                  <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
-                </mesh>
-              ))}
+              {/* Chain links around the blade - same as original */}
+              {Array.from({ length: 16 }, (_, j) => {
+                const linkAngle = (j / 16) * Math.PI * 2;
+                const x = Math.cos(linkAngle) * 0.4;
+                const z = Math.sin(linkAngle) * 0.4;
+                return (
+                  <mesh key={`blade-link-${j}`} position={[x, 0, z]} rotation={[0, linkAngle, 0]}>
+                    <boxGeometry args={[0.12, 0.2, 0.08]} />
+                    <meshStandardMaterial color="#cc0000" metalness={0.9} roughness={0.1} />
+                  </mesh>
+                );
+              })}
+              {/* Sharp teeth - same as original */}
+              {Array.from({ length: 32 }, (_, j) => {
+                const toothAngle = (j / 32) * Math.PI * 2;
+                const x = Math.cos(toothAngle) * 0.5;
+                const z = Math.sin(toothAngle) * 0.5;
+                return (
+                  <mesh key={`blade-tooth-${j}`} position={[x, 0, z]} rotation={[0, toothAngle, 0]}>
+                    <coneGeometry args={[0.04, 0.15, 4]} />
+                    <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
+                  </mesh>
+                );
+              })}
             </group>
           );
         })}
