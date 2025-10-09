@@ -34,6 +34,7 @@ const App = () => (
           <Route path="/game" element={<GameManager />} />
           <Route path="/game/:level" element={<GameManager />} />
           <Route path="/towv2" element={<TowV2 />} />
+          <Route path="/towv2/:code" element={<TowV2 />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
