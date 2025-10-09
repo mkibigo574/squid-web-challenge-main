@@ -97,6 +97,16 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       // Simple gravity
       vyRef.current -= 0.012; // gravity accel
       currentYRef.current += vyRef.current;
+      
+      // Move horizontally toward center while falling
+      const centerX = 0;
+      const moveSpeed = 0.08; // horizontal movement speed
+      if (currentXRef.current > centerX) {
+        currentXRef.current = Math.max(centerX, currentXRef.current - moveSpeed);
+      } else if (currentXRef.current < centerX) {
+        currentXRef.current = Math.min(centerX, currentXRef.current + moveSpeed);
+      }
+      
       // Clamp to floor
       const minY = floorY + 0.2;
       if (currentYRef.current <= minY) {
