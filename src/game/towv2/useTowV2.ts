@@ -28,16 +28,19 @@ export function useTowV2() {
     const onPlayers = (raw: any[]) => {
       console.log('Raw presence data:', raw);
       // Derive team by sign of initial position; fallback alternate assignment
-      const mapped: V2Player[] = raw.map((p, idx) => ({
-        id: p.id,
-        name: p.name,
-        team: p.position !== undefined && p.position !== null ? 
-          (p.position < 0 ? 'red' : 'blue') : 
-          undefined,
-        position: p.position, // Don't set default position - keep undefined if not set
-        pullPower: typeof p.pullStrength === 'number' ? p.pullStrength : 0,
-        isPulling: !!p.isPulling,
-      }));
+      const mapped: V2Player[] = raw.map((p, idx) => {
+        const hasPosition = p.position !== undefined && p.position !== null;
+        const team = hasPosition ? (p.position < 0 ? 'red' : 'blue') : undefined;
+        console.log(`Player ${p.id}: position=${p.position}, hasPosition=${hasPosition}, team=${team}`);
+        return {
+          id: p.id,
+          name: p.name,
+          team: team,
+          position: p.position, // Don't set default position - keep undefined if not set
+          pullPower: typeof p.pullStrength === 'number' ? p.pullStrength : 0,
+          isPulling: !!p.isPulling,
+        };
+      });
       console.log('Mapped players:', mapped);
       setPlayers(mapped);
     };
