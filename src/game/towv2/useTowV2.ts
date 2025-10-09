@@ -19,6 +19,7 @@ export function useTowV2() {
   const [countdown, setCountdown] = useState(3);
   const [host, setHost] = useState(false);
   const [winner, setWinner] = useState<null | 'red' | 'blue'>(null);
+  const [selectedTeam, setSelectedTeam] = useState<null | 'red' | 'blue'>(null);
 
   const selfIdRef = useRef<string>(multiplayerManager.getSelfId() || crypto.randomUUID());
   const lastUpdateRef = useRef<number>(0);
@@ -160,6 +161,7 @@ export function useTowV2() {
 
   const chooseTeam = useCallback((team: 'red' | 'blue') => {
     const position = team === 'red' ? -6 : 6;
+    setSelectedTeam(team);
     multiplayerManager.updatePresence({ position });
   }, []);
 
@@ -176,6 +178,7 @@ export function useTowV2() {
     setPhase('lobby');
     setWinner(null);
     setRope(0);
+    setSelectedTeam(null);
     broadcastState({ v2: true, phase: 'lobby', rope: 0, winner: null });
   }, [host, broadcastState]);
 
@@ -191,6 +194,7 @@ export function useTowV2() {
     startGame,
     reset,
     winner,
+    selectedTeam,
   };
 }
 

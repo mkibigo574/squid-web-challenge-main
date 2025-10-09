@@ -315,7 +315,7 @@ function TeamPlayers({ rope, redEffort, blueEffort, detachedRed, detachedBlue, p
 }
 
 export const MultiplayerTugOfWarV2 = () => {
-  const { phase, rope, start, setSelfPulling, countdown, chooseTeam, startGame, reset, winner, players } = useTowV2() as any;
+  const { phase, rope, start, setSelfPulling, countdown, chooseTeam, startGame, reset, winner, players, selectedTeam } = useTowV2() as any;
   const [power, setPower] = useState(0);
   const [detachedRed, setDetachedRed] = useState(false);
   const [detachedBlue, setDetachedBlue] = useState(false);
@@ -406,9 +406,37 @@ export const MultiplayerTugOfWarV2 = () => {
         )}
         {phase === 'positioning' && (
           <>
-            <button className="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1 rounded" onClick={() => chooseTeam('red')}>Join Red</button>
-            <button className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded" onClick={() => chooseTeam('blue')}>Join Green</button>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded" onClick={startGame}>Start Tug of War</button>
+            <button 
+              className={`px-3 py-1 rounded text-white font-semibold transition-all duration-200 transform ${
+                selectedTeam === 'red' 
+                  ? 'bg-rose-500 scale-110 shadow-lg ring-2 ring-rose-300 ring-opacity-50' 
+                  : 'bg-rose-600 hover:bg-rose-700 hover:scale-105'
+              }`}
+              onClick={() => chooseTeam('red')}
+            >
+              {selectedTeam === 'red' ? '✓ Red Team' : 'Join Red'}
+            </button>
+            <button 
+              className={`px-3 py-1 rounded text-white font-semibold transition-all duration-200 transform ${
+                selectedTeam === 'blue' 
+                  ? 'bg-green-500 scale-110 shadow-lg ring-2 ring-green-300 ring-opacity-50' 
+                  : 'bg-green-600 hover:bg-green-700 hover:scale-105'
+              }`}
+              onClick={() => chooseTeam('blue')}
+            >
+              {selectedTeam === 'blue' ? '✓ Green Team' : 'Join Green'}
+            </button>
+            <button 
+              className={`px-3 py-1 rounded text-white font-semibold transition-all duration-200 ${
+                selectedTeam 
+                  ? 'bg-blue-600 hover:bg-blue-700 hover:scale-105' 
+                  : 'bg-gray-500 cursor-not-allowed opacity-50'
+              }`}
+              onClick={startGame}
+              disabled={!selectedTeam}
+            >
+              Start Tug of War
+            </button>
           </>
         )}
         <button className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded" onClick={reset}>Reset</button>
