@@ -333,6 +333,17 @@ function TeamPlayers({ rope, redEffort, blueEffort, detachedRed, detachedBlue, p
   const leftOffsets = [-3.8 - shift, -3.0 - shift, -2.2 - shift];
   const rightOffsets = [3.8 + shift, 3.0 + shift, 2.2 + shift];
   const z = 0; // keep all players aligned with rope (no cross-rope spacing)
+  
+  // Debug: Log rope positioning for team players
+  console.log('TeamPlayers positioning:', {
+    rope,
+    ropeCenterX,
+    leftOffsets,
+    rightOffsets,
+    leftPositions: leftOffsets.map(ox => ropeCenterX + ox),
+    rightPositions: rightOffsets.map(ox => ropeCenterX + ox),
+    phase
+  });
 
   return (
     <group>
