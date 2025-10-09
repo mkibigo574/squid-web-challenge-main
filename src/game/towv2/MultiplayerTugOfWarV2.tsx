@@ -274,7 +274,7 @@ export const MultiplayerTugOfWarV2 = () => {
         {phase !== 'results' ? (
           <>Power: {(power*100).toFixed(0)}% — click or press any key rapidly to pull</>
         ) : (
-          <>Winner: {winner ?? '—'}</>
+          <>Winner: {winner === 'blue' ? 'Green' : winner === 'red' ? 'Red' : '—'}</>
         )}
       </div>
     </div>
