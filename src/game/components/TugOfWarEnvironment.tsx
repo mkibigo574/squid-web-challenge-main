@@ -6,6 +6,7 @@ export const TugOfWarEnvironment = () => {
   const groundRef = useRef<THREE.Mesh>(null);
   const pulseRef = useRef<THREE.Mesh>(null);
   const markerGroupRef = useRef<THREE.Group>(null);
+  const chainsawRef = useRef<THREE.Group>(null);
   
   // Pulsing emissive for the hanging midpoint marker
   useFrame((state) => {
@@ -19,6 +20,11 @@ export const TugOfWarEnvironment = () => {
       // Gentle pendulum sway and bob
       markerGroupRef.current.rotation.z = Math.sin(t * 1.2) * 0.08;
       markerGroupRef.current.position.y = 3 + Math.sin(t * 2.0) * 0.06;
+    }
+    // Rotate the chainsaw chain
+    if (chainsawRef.current) {
+      const t = state.clock.elapsedTime;
+      chainsawRef.current.rotation.y = t * 8; // Fast rotation
     }
   });
 
@@ -92,6 +98,38 @@ export const TugOfWarEnvironment = () => {
         <meshStandardMaterial color="#404040" />
       </mesh>
 
+      {/* Rotating chainsaw chain in the center gap */}
+      <group ref={chainsawRef} position={[0, -5.8, 0]}>
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.15, 0.15, 8]} />
+          <meshStandardMaterial color="#2a2a2a" metalness={0.8} roughness={0.2} />
+        </mesh>
+        {/* Chain links around the cylinder */}
+        {Array.from({ length: 12 }, (_, i) => {
+          const angle = (i / 12) * Math.PI * 2;
+          const x = Math.cos(angle) * 0.25;
+          const z = Math.sin(angle) * 0.25;
+          return (
+            <mesh key={i} position={[x, 0, z]} rotation={[0, angle, 0]}>
+              <boxGeometry args={[0.08, 0.12, 0.04]} />
+              <meshStandardMaterial color="#444444" metalness={0.9} roughness={0.1} />
+            </mesh>
+          );
+        })}
+        {/* Sharp teeth */}
+        {Array.from({ length: 24 }, (_, i) => {
+          const angle = (i / 24) * Math.PI * 2;
+          const x = Math.cos(angle) * 0.3;
+          const z = Math.sin(angle) * 0.3;
+          return (
+            <mesh key={`tooth-${i}`} position={[x, 0, z]} rotation={[0, angle, 0]}>
+              <coneGeometry args={[0.02, 0.08, 4]} />
+              <meshStandardMaterial color="#666666" metalness={0.9} roughness={0.1} />
+            </mesh>
+          );
+        })}
+      </group>
+
       {/* Removed midpoint guillotine/marker for cleaner stage */}
 
       {/* Background gradient panels and central light streak */}
@@ -107,6 +145,9 @@ export const TugOfWarEnvironment = () => {
       <spotLight position={[-28, 22, 12]} angle={0.55} intensity={1.4} color="#6a40d8" penumbra={0.7} castShadow />
       <spotLight position={[28, 22, -12]} angle={0.55} intensity={1.2} color="#ff8c3a" penumbra={0.7} castShadow />
       <directionalLight position={[0, 18, 6]} intensity={0.7} castShadow />
+      
+      {/* Chainsaw lighting */}
+      <pointLight position={[0, -5.8, 0]} intensity={0.8} color="#ff4444" distance={6} />
     </group>
   );
 };
