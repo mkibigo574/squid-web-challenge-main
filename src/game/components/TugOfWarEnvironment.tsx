@@ -33,7 +33,7 @@ export const TugOfWarEnvironment = () => {
       {/* Background floor to catch stylized lighting */}
       <mesh ref={groundRef} position={[0, -8, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[80, 60]} />
-        <meshStandardMaterial color="#111018" />
+        <meshStandardMaterial color="#ffff00" />
       </mesh>
 
       {/* Central brown stage with gold trim (widened to fit extended teams) */}
@@ -65,19 +65,19 @@ export const TugOfWarEnvironment = () => {
             <mesh position={[0, -1.2, 2.8]}>
               <boxGeometry args={[20, 0.2, 0.2]} />
               <meshStandardMaterial color="#6f5a24" />
-            </mesh>
+        </mesh>
             <mesh position={[0, -1.2, -2.8]}>
               <boxGeometry args={[20, 0.2, 0.2]} />
               <meshStandardMaterial color="#6f5a24" />
-            </mesh>
+        </mesh>
             <mesh position={[9.8, -8.2, 0]}>
               <boxGeometry args={[0.2, 14, 0.2]} />
               <meshStandardMaterial color="#8B4513" />
-            </mesh>
+        </mesh>
             <mesh position={[-9.8, -8.2, 0]}>
               <boxGeometry args={[0.2, 14, 0.2]} />
               <meshStandardMaterial color="#8B4513" />
-            </mesh>
+        </mesh>
           </group>
         ))}
       </group>
@@ -223,7 +223,7 @@ export const TugOfWarEnvironment = () => {
       <group position={[0, 0, -8]}>
         <mesh rotation={[0, 0, 0]}>
           <planeGeometry args={[120, 60]} />
-          <meshStandardMaterial color="#0f0a2e" />
+          <meshStandardMaterial color="#ffffcc" />
         </mesh>
       </group>
 

@@ -93,7 +93,7 @@ class MultiplayerManager {
         isMoving: false,
         isPulling: false,
         pullStrength: 0,
-        position: undefined
+        position: 0
       };
       this.addPlayer(this.selfPresence);
       return;
@@ -214,7 +214,7 @@ class MultiplayerManager {
             isMoving: false,
             isPulling: false,
             pullStrength: 0,
-            position: undefined
+            position: 0
           };
 
           if (this.channel) {

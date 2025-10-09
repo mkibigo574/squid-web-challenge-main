@@ -415,15 +415,15 @@ export const MultiplayerTugOfWarV2 = () => {
 
 
   return (
-    <div className="w-full h-screen relative bg-black">
+    <div className="w-full h-screen relative bg-yellow-400">
       <Canvas
         shadows
         camera={{ position: [0, 10, 30], fov: 55, near: 0.1, far: 2000 }}
         gl={{ toneMapping: THREE.ACESFilmicToneMapping }}
       >
-        {/* Squid Game dark violet atmosphere */}
-        <color attach="background" args={["#0b0720"]} />
-        <fog attach="fog" args={["#0b0720", 20, 120]} />
+        {/* Yellow background atmosphere */}
+        <color attach="background" args={["#ffff00"]} />
+        <fog attach="fog" args={["#ffff00", 20, 120]} />
         {(() => {
           function CameraAutoFrame() {
             const { camera, size } = useThree();
@@ -431,11 +431,13 @@ export const MultiplayerTugOfWarV2 = () => {
               const stageWidth = 48; // matches widened stage
               const margin = 8; // extra framing space
               const effectiveWidth = stageWidth + margin;
-              const fovRad = (camera.fov * Math.PI) / 180;
-              const distance = (effectiveWidth / 2) / Math.tan(fovRad / 2);
-              camera.position.set(0, 10, distance);
-              camera.lookAt(0, 1.0, 0);
-              camera.updateProjectionMatrix();
+              if ('fov' in camera) {
+                const fovRad = (camera.fov * Math.PI) / 180;
+                const distance = (effectiveWidth / 2) / Math.tan(fovRad / 2);
+                camera.position.set(0, 10, distance);
+                camera.lookAt(0, 1.0, 0);
+                camera.updateProjectionMatrix();
+              }
             }, [camera, size.width, size.height]);
             return null;
           }
@@ -450,7 +452,7 @@ export const MultiplayerTugOfWarV2 = () => {
                   return <TeamPlayers rope={rope} redEffort={redEff} blueEffort={blueEff} detachedRed={detachedRed} detachedBlue={detachedBlue} phase={phase} />; })()}
       </Canvas>
 
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/90 text-sm bg-black/60 px-3 py-1 rounded">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 text-black/90 text-sm bg-white/90 px-3 py-1 rounded border border-gray-400 shadow-lg">
         {phase === 'lobby' && 'Waiting for players...'}
         {phase === 'floating' && 'Players floating above platforms - Get ready!'}
         {phase === 'positioning' && 'Choose your team!'}
@@ -499,7 +501,7 @@ export const MultiplayerTugOfWarV2 = () => {
         )}
         <button className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded" onClick={reset}>Reset</button>
       </div>
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/90 text-sm bg-black/60 px-3 py-2 rounded">
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-black/90 text-sm bg-white/90 px-3 py-2 rounded border border-gray-400 shadow-lg">
         {phase !== 'results' ? (
           <>Power: {(power*100).toFixed(0)}% — click or press any key rapidly to pull</>
         ) : (

@@ -62,17 +62,6 @@ export function useTowV2() {
           team = idx % 2 === 0 ? 'red' : 'blue';
         }
         
-        // Debug: Log team assignment for first few players
-        if (idx < 3) {
-          console.log(`Player ${idx} team assignment:`, {
-            id: p.id,
-            presenceTeam: p.team,
-            position: p.position,
-            assignedTeam: team,
-            fallbackUsed: !p.team && typeof p.position !== 'number'
-          });
-        }
-        
         return {
           id: p.id,
           name: p.name,
@@ -94,13 +83,22 @@ export function useTowV2() {
       }
     };
     const onRope = (payload: any) => {
-      if (typeof payload?.rope === 'number') setRope(Math.max(-1, Math.min(1, payload.rope)));
+      if (typeof payload?.rope === 'number') {
+        console.log('Rope position received from external source:', payload.rope);
+        setRope(Math.max(-1, Math.min(1, payload.rope)));
+      }
     };
     const onState = (payload: any) => {
       if (payload?.v2 !== true) return;
-      if (payload.phase) setPhase(payload.phase);
+      if (payload.phase) {
+        console.log('Phase changed via state:', payload.phase);
+        setPhase(payload.phase);
+      }
       if (typeof payload.countdown === 'number') setCountdown(payload.countdown);
-      if (typeof payload.rope === 'number') setRope(payload.rope);
+      if (typeof payload.rope === 'number') {
+        console.log('Rope position changed via state:', payload.rope);
+        setRope(payload.rope);
+      }
       if (payload.winner) setWinner(payload.winner);
     };
 
@@ -121,6 +119,7 @@ export function useTowV2() {
   // Reset rope to center when game resets
   useEffect(() => {
     if (phase === 'lobby' || phase === 'floating') {
+      console.log('Phase changed to', phase, '- resetting rope to 0');
       setRope(0);
     }
   }, [phase]);
@@ -212,13 +211,14 @@ export function useTowV2() {
 
   const reset = useCallback(() => {
     if (!host) return;
+    console.log('Reset called - rope before:', rope);
     setPhase('lobby');
     setWinner(null);
     setRope(0);
-    // Don't reset selectedTeam - preserve team assignments across resets
-    // setSelectedTeam(null);
+    setSelectedTeam(null);
+    console.log('Reset called - rope after setRope(0):', 0);
     broadcastState({ v2: true, phase: 'lobby', rope: 0, winner: null });
-  }, [host, broadcastState]);
+  }, [host, broadcastState, rope]);
 
   return {
     phase,
