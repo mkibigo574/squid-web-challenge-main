@@ -101,7 +101,7 @@ export const TugOfWarEnvironment = () => {
       {/* Rotating chainsaw chain in the center gap */}
       <group ref={chainsawRef} position={[0, -5, 0]}>
         <mesh rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.3, 0.3, 12]} />
+          <cylinderGeometry args={[0.3, 0.3, 7]} />
           <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
         </mesh>
         
@@ -112,7 +112,7 @@ export const TugOfWarEnvironment = () => {
             <group key={`blade-${i}`} rotation={[0, angle, 0]}>
               {/* Main blade - same as chainsaw cylinder */}
               <mesh position={[0, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-                <cylinderGeometry args={[0.3, 0.3, 12]} />
+                <cylinderGeometry args={[0.3, 0.3, 7]} />
                 <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
               </mesh>
               {/* Chain links around the blade - same as original */}
