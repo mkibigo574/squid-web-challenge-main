@@ -93,6 +93,8 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       if (!hasDetachedRef.current) {
         hasDetachedRef.current = true;
         vyRef.current = -0.02;
+        // Set landing position to center of the gap
+        currentXRef.current = 0;
       }
       // Simple gravity
       vyRef.current -= 0.012; // gravity accel
