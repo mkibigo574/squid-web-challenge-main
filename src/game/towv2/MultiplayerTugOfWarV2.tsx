@@ -108,19 +108,6 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       // Player hands are at HAND_LOCAL_Y relative to player group
       // So player group should be at: ropeY - HAND_LOCAL_Y
       currentYRef.current = ropeY - HAND_LOCAL_Y + Math.max(0, bob);
-      
-      // Debug: Log hand positions for first player
-      if (side === 'left' && playerIndex === 0) {
-        console.log('Hand positioning debug:', {
-          playerX: currentXRef.current,
-          playerY: currentYRef.current,
-          leftHandX: currentXRef.current - 0.1,
-          rightHandX: currentXRef.current + 0.1,
-          handY: currentYRef.current + HAND_LOCAL_Y,
-          ropeY,
-          phase
-        });
-      }
       vyRef.current = 0;
       hasDetachedRef.current = false;
       isDisappearingRef.current = false; // Reset disappearing state
@@ -317,12 +304,12 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       </mesh>
       {/* hands gripping rope (around rope along x axis) */}
       <mesh ref={rightHand} position={[0.1, 1.2, 0]}>
-        <sphereGeometry args={[0.1, 12, 12]} />
-        <meshStandardMaterial color="#eee" />
+        <sphereGeometry args={[0.15, 12, 12]} />
+        <meshStandardMaterial color="#ff6b6b" />
       </mesh>
       <mesh ref={leftHand} position={[-0.1, 1.2, 0]}>
-        <sphereGeometry args={[0.1, 12, 12]} />
-        <meshStandardMaterial color="#eee" />
+        <sphereGeometry args={[0.15, 12, 12]} />
+        <meshStandardMaterial color="#ff6b6b" />
       </mesh>
       {/* simple feet */}
       <mesh ref={footRRef} position={[0.18, 0.2, 0.08]}>
