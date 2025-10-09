@@ -291,7 +291,7 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
   });
 
   return (
-    <group ref={group} position={[x, 0, z]} rotation={[0, rotationY, 0]}>
+    <group ref={group} position={[x, 0, z]}>
       {/* body */}
       <mesh position={[0, 0.9, 0]} castShadow>
         <capsuleGeometry args={[0.35, 0.8, 4, 10]} />
