@@ -315,7 +315,7 @@ function TeamPlayers({ rope, redEffort, blueEffort, detachedRed, detachedBlue, p
 }
 
 export const MultiplayerTugOfWarV2 = () => {
-  const { phase, rope, start, setSelfPulling, countdown, chooseTeam, reset, winner, players } = useTowV2() as any;
+  const { phase, rope, start, setSelfPulling, countdown, chooseTeam, startGame, reset, winner, players } = useTowV2() as any;
   const [power, setPower] = useState(0);
   const [detachedRed, setDetachedRed] = useState(false);
   const [detachedBlue, setDetachedBlue] = useState(false);
@@ -395,7 +395,7 @@ export const MultiplayerTugOfWarV2 = () => {
       <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/90 text-sm bg-black/60 px-3 py-1 rounded">
         {phase === 'lobby' && 'Waiting for players...'}
         {phase === 'floating' && 'Players floating above platforms - Get ready!'}
-        {phase === 'positioning' && `Choose your team! Game starts in ${countdown}...`}
+        {phase === 'positioning' && 'Choose your team!'}
         {phase === 'pulling' && 'Tug of War!'}
         {phase === 'falling' && 'Players falling...'}
         {phase === 'results' && `Winner: ${winner === 'blue' ? 'Green' : winner === 'red' ? 'Red' : '—'}`}
@@ -404,13 +404,14 @@ export const MultiplayerTugOfWarV2 = () => {
         {phase === 'floating' && (
           <button className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded" onClick={start}>Start Game</button>
         )}
-        <button className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded" onClick={reset}>Reset</button>
         {phase === 'positioning' && (
           <>
             <button className="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1 rounded" onClick={() => chooseTeam('red')}>Join Red</button>
             <button className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded" onClick={() => chooseTeam('blue')}>Join Green</button>
+            <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded" onClick={startGame}>Start Tug of War</button>
           </>
         )}
+        <button className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded" onClick={reset}>Reset</button>
       </div>
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/90 text-sm bg-black/60 px-3 py-2 rounded">
         {phase !== 'results' ? (

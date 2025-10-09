@@ -122,14 +122,10 @@ export function useTowV2() {
     if (phase === 'floating') {
       // Transition from floating to positioning (still floating)
       setPhase('positioning');
-      setCountdown(3);
+      setCountdown(0);
       setWinner(null);
       setRope(0);
-      multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'positioning', countdown: 3, rope: 0, winner: null });
-      setTimeout(() => {
-        setPhase('pulling');
-        multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'pulling', rope: 0 });
-      }, 3000);
+      multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'positioning', countdown: 0, rope: 0, winner: null });
     }
   }, [host, phase]);
 
@@ -145,6 +141,14 @@ export function useTowV2() {
     const position = team === 'red' ? -6 : 6;
     multiplayerManager.updatePresence({ position });
   }, []);
+
+  const startGame = useCallback(() => {
+    if (!host) return;
+    if (phase === 'positioning') {
+      setPhase('pulling');
+      multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'pulling', rope: 0 });
+    }
+  }, [host, phase]);
 
   const reset = useCallback(() => {
     if (!host) return;
@@ -163,6 +167,7 @@ export function useTowV2() {
     start,
     setSelfPulling,
     chooseTeam,
+    startGame,
     reset,
     winner,
   };
