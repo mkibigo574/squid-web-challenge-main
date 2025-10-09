@@ -44,15 +44,21 @@ export const useMultiplayerTugOfWar = () => {
   // Initialize multiplayer connection
   useEffect(() => {
     const handlePlayersUpdate = (updatedPlayers: any[]) => {
-      const tugOfWarPlayers: TugOfWarPlayer[] = updatedPlayers.map(player => ({
-        id: player.id,
-        name: player.name,
-        isEliminated: player.isEliminated || false,
-        isPulling: player.isPulling || false,
-        pullStrength: player.pullStrength || 0,
-        position: player.position || 0,
-        ts: player.ts
-      }));
+      const tugOfWarPlayers: TugOfWarPlayer[] = updatedPlayers.map((player, index) => {
+        // Assign proper starting positions based on team
+        const teamSide = index % 2 === 0 ? 'left' : 'right';
+        const startingPosition = teamSide === 'left' ? -6 : 6;
+        
+        return {
+          id: player.id,
+          name: player.name,
+          isEliminated: player.isEliminated || false,
+          isPulling: player.isPulling || false,
+          pullStrength: player.pullStrength || 0,
+          position: player.position !== undefined ? player.position : startingPosition,
+          ts: player.ts
+        };
+      });
       setPlayers(tugOfWarPlayers);
     };
 

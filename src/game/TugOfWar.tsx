@@ -128,6 +128,14 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
 
   // Stable ref for player to follow
   const playerRef = useRef<THREE.Group>(null);
+  const aiPlayerRef = useRef<THREE.Group>(null);
+  
+  // Player position and force tracking
+  const [leftPlayerPosition, setLeftPlayerPosition] = useState(-6);
+  const [rightPlayerPosition, setRightPlayerPosition] = useState(6);
+  const [leftPullForce, setLeftPullForce] = useState(0);
+  const [rightPullForce, setRightPullForce] = useState(0);
+  const [pullStrength, setPullStrength] = useState(0);
 
   // Handle keyboard input for tugging
   useEffect(() => {
@@ -182,19 +190,52 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
         
         <TugOfWarEnvironment />
         
+        {/* Left Team Player */}
         <TugOfWarPlayer
           gameState={gameState}
           onPositionUpdate={(position) => {
-            // Handle position updates if needed
+            // Handle left player position updates
+            setLeftPlayerPosition(position);
           }}
           modelPath={MODEL_CONFIG.player.path}
           onRefReady={(ref) => { (playerRef as any).current = ref.current; }}
           isPulling={isPulling}
+          pullStrength={pullStrength}
+          ropePosition={ropePosition}
+          teamSide="left"
+          onPullForce={(force) => {
+            setLeftPullForce(force);
+            setPullStrength(force);
+          }}
+          isAI={false}
+          opponentPosition={rightPlayerPosition}
+        />
+        
+        {/* Right Team Player (AI) */}
+        <TugOfWarPlayer
+          gameState={gameState}
+          onPositionUpdate={(position) => {
+            // Handle right player position updates
+            setRightPlayerPosition(position);
+          }}
+          modelPath={MODEL_CONFIG.player.path}
+          onRefReady={(ref) => { (aiPlayerRef as any).current = ref.current; }}
+          isPulling={false} // AI doesn't pull, it resists
+          pullStrength={0}
+          ropePosition={ropePosition}
+          teamSide="right"
+          onPullForce={(force) => setRightPullForce(force)}
+          isAI={true}
+          opponentPosition={leftPlayerPosition}
         />
         
         <TugOfWarRope 
           ropePosition={ropePosition}
           gameState={gameState}
+          leftPlayerPos={leftPlayerPosition}
+          rightPlayerPos={rightPlayerPosition}
+          hasLeftPlayer={true}
+          hasRightPlayer={true}
         />
         
         <Celebration gameState={gameState} />

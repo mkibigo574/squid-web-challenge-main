@@ -12,6 +12,9 @@ interface TugOfWarPlayerProps {
   ropePosition?: 'left' | 'center' | 'right';
   teamSide?: 'left' | 'right';
   onPullForce?: (force: number) => void;
+  isAI?: boolean;
+  opponentPosition?: number;
+  initialPosition?: number;
 }
 
 export const TugOfWarPlayer = ({ 
@@ -23,14 +26,17 @@ export const TugOfWarPlayer = ({
   pullStrength = 0,
   ropePosition = 'center',
   teamSide = 'right',
-  onPullForce
+  onPullForce,
+  isAI = false,
+  opponentPosition = 0,
+  initialPosition
 }: TugOfWarPlayerProps) => {
   const groupRef = useRef<THREE.Group>(null);
   const [model, setModel] = useState<THREE.Group | null>(null);
   const [mixer, setMixer] = useState<THREE.AnimationMixer | null>(null);
   const [currentAction, setCurrentAction] = useState<THREE.AnimationAction | null>(null);
   const [velocity, setVelocity] = useState(0);
-  const [position, setPosition] = useState(teamSide === 'left' ? -6 : 6);
+  const [position, setPosition] = useState(initialPosition !== undefined ? initialPosition : (teamSide === 'left' ? -6 : 6));
 
   // Load the 3D model
   useEffect(() => {
@@ -111,49 +117,59 @@ export const TugOfWarPlayer = ({
     let totalForce = 0;
     
     // 1. Restoring force - pull back to starting position (weaker when actively pulling)
-    const restoringStrength = isPulling ? 0.02 : 0.05;
+    const restoringStrength = isPulling ? 0.01 : 0.02;
     const restoringForce = (targetSide - currentPos) * restoringStrength;
     totalForce += restoringForce;
     
     // 2. Pulling force - when this player is pulling, move away from center (enhanced)
     if (isPulling) {
-      const pullForce = teamSide === 'left' ? -pullStrength * 2.5 : pullStrength * 2.5;
+      const pullForce = teamSide === 'left' ? -pullStrength * 4.0 : pullStrength * 4.0;
       totalForce += pullForce;
     }
     
-    // 3. Opponent pulling force - when opponent is pulling, this player gets pulled towards center (enhanced)
-    // This is the key mechanic: when one team pulls, the other team gets pulled toward center
-    if (ropePosition !== 'center') {
-      const opponentPullStrength = 0.8; // Increased from 0.4
-      const opponentPullForce = teamSide === 'left' ? opponentPullStrength : -opponentPullStrength;
-      totalForce += opponentPullForce;
+    // 3. AI Resistance - AI provides counter-force based on opponent's position
+    if (isAI) {
+      const distanceFromOpponent = Math.abs(currentPos - opponentPosition);
+      const resistanceStrength = Math.min(2.0, distanceFromOpponent * 0.3);
+      const resistanceForce = teamSide === 'left' ? resistanceStrength : -resistanceStrength;
+      totalForce += resistanceForce;
+      
+      // AI also pulls back when being pulled too close to center
+      if (Math.abs(currentPos) < 4) {
+        const emergencyForce = teamSide === 'left' ? -1.5 : 1.5;
+        totalForce += emergencyForce;
+      }
     }
     
     // 4. Rope position influence - when rope moves, players should move accordingly
     if (ropePosition === 'right' && teamSide === 'right') {
       // Right team is winning, move further right
-      totalForce += 0.6;
+      totalForce += 1.2;
     } else if (ropePosition === 'right' && teamSide === 'left') {
       // Left team is losing, move closer to center
-      totalForce += 0.4;
+      totalForce += 0.8;
     } else if (ropePosition === 'left' && teamSide === 'left') {
       // Left team is winning, move further left
-      totalForce -= 0.6;
+      totalForce -= 1.2;
     } else if (ropePosition === 'left' && teamSide === 'right') {
       // Right team is losing, move closer to center
-      totalForce -= 0.4;
+      totalForce -= 0.8;
     }
     
+    // 5. Dynamic rope tension - players get pulled toward each other based on distance
+    const ropeTension = (opponentPosition - currentPos) * 0.1;
+    totalForce += ropeTension;
+    
     // Apply physics with momentum
-    const friction = 0.55; // Higher friction for more controlled movement
-    const newVelocity = (velocity + totalForce * delta * 20) * friction;
-    const newPosition = currentPos + newVelocity * delta * 20;
+    const friction = 0.7; // Higher friction for more controlled movement
+    const newVelocity = (velocity + totalForce * delta * 30) * friction;
+    const newPosition = currentPos + newVelocity * delta * 30;
     
     // Check for elimination - if player gets too close to center gap
-    const centerGapThreshold = 1.5; // Distance from center where players fall
+    const centerGapThreshold = 1.0; // Distance from center where players fall
     if (Math.abs(newPosition) < centerGapThreshold) {
       // Player falls through the gap - start falling animation
-      const fallVelocity = -5; // Fast fall
+      const fallVelocity = -8; // Fast fall
       groupRef.current.position.y += fallVelocity * delta;
       
       // If fallen below surface, mark as eliminated
@@ -163,7 +179,7 @@ export const TugOfWarPlayer = ({
       }
     } else {
       // Normal movement on elevated surface
-      const clampedPosition = Math.max(-10, Math.min(10, newPosition));
+      const clampedPosition = Math.max(-8, Math.min(8, newPosition));
       groupRef.current.position.x = clampedPosition;
       groupRef.current.position.y = 1.5; // Keep on elevated surface
       setVelocity(newVelocity);
@@ -192,6 +208,14 @@ export const TugOfWarPlayer = ({
       setVelocity(0);
     }
   }, [gameState, teamSide]);
+
+  // Sync position when initialPosition changes (for multiplayer)
+  useEffect(() => {
+    if (initialPosition !== undefined && groupRef.current) {
+      groupRef.current.position.set(initialPosition, 1.5, 0);
+      setPosition(initialPosition);
+    }
+  }, [initialPosition]);
 
   return (
     <group ref={groupRef}>

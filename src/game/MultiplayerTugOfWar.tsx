@@ -194,32 +194,32 @@ export const MultiplayerTugOfWar = () => {
         {/* Players */}
         {players.map((player, index) => {
           const teamSide = index % 2 === 0 ? 'left' : 'right';
-          const basePosition = teamSide === 'left' ? -6 : 6;
-          const sideOffset = index % 2 === 0 ? -1 : 1; // Alternate sides
           
           return (
-            <group key={player.id} position={[basePosition + sideOffset, 0, 0]}>
-              <TugOfWarPlayer
-                gameState={gameState}
-                isPulling={player.isPulling}
-                pullStrength={player.pullStrength}
-                ropePosition={ropePosition}
-                teamSide={teamSide}
-                modelPath={MODEL_CONFIG.player.path}
-                onPositionUpdate={(pos) => {
-                  // Update player position in the players array
-                  setPlayers(prev => prev.map(p => 
-                    p.id === player.id ? { ...p, position: pos } : p
-                  ));
-                }}
-                onPullForce={(force) => {
-                  // Update player pull force
-                  setPlayers(prev => prev.map(p => 
-                    p.id === player.id ? { ...p, pullForce: force } : p
-                  ));
-                }}
-              />
-            </group>
+            <TugOfWarPlayer
+              key={player.id}
+              gameState={gameState}
+              isPulling={player.isPulling}
+              pullStrength={player.pullStrength}
+              ropePosition={ropePosition}
+              teamSide={teamSide}
+              modelPath={MODEL_CONFIG.player.path}
+              initialPosition={player.position}
+              onPositionUpdate={(pos) => {
+                // Update player position in the players array
+                setPlayers(prev => prev.map(p => 
+                  p.id === player.id ? { ...p, position: pos } : p
+                ));
+              }}
+              onPullForce={(force) => {
+                // Update player pull force
+                setPlayers(prev => prev.map(p => 
+                  p.id === player.id ? { ...p, pullForce: force } : p
+                ));
+              }}
+              isAI={false} // Multiplayer players are human
+              opponentPosition={players.find(p => p.id !== player.id)?.position || 0}
+            />
           );
         })}
         
