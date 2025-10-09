@@ -74,6 +74,7 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
   const hasDetachedRef = useRef<boolean>(false);
   const isDisappearingRef = useRef<boolean>(false);
   const disappearStartTimeRef = useRef<number>(0);
+  const bubblesRef = useRef<THREE.Group>(null);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
@@ -91,6 +92,10 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
         group.current.rotation.z = lean;
         group.current.visible = true; // Make sure player is visible
         group.current.scale.setScalar(1); // Reset scale
+      }
+      if (bubblesRef.current) {
+        bubblesRef.current.clear(); // Clear any existing bubbles
+        bubblesRef.current.visible = true; // Make sure bubbles are visible
       }
       const jitter = Math.sin(t * 24 + x * 0.3) * 0.04 * effort;
       if (leftHand.current) leftHand.current.position.x = -0.06 + jitter;
@@ -114,6 +119,29 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       if (!isDisappearingRef.current && currentYRef.current <= chainsawY) {
         isDisappearingRef.current = true;
         disappearStartTimeRef.current = t;
+        
+        // Create bubbles for magical effect
+        if (bubblesRef.current) {
+          bubblesRef.current.clear();
+          for (let i = 0; i < 8; i++) {
+            const bubble = new THREE.Mesh(
+              new THREE.SphereGeometry(0.1 + Math.random() * 0.1, 8, 6),
+              new THREE.MeshStandardMaterial({
+                color: '#ffffff',
+                transparent: true,
+                opacity: 0.8,
+                metalness: 0.1,
+                roughness: 0.9
+              })
+            );
+            bubble.position.set(
+              (Math.random() - 0.5) * 2,
+              0,
+              (Math.random() - 0.5) * 2
+            );
+            bubblesRef.current.add(bubble);
+          }
+        }
       }
       
       // Magical disappearing effect
@@ -149,10 +177,39 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
               }
             });
           }
+          
+          // Bubble effect
+          if (bubblesRef.current) {
+            bubblesRef.current.children.forEach((bubble, index) => {
+              const bubbleMesh = bubble as THREE.Mesh;
+              const bubbleTime = disappearTime + index * 0.1;
+              const bubbleProgress = (bubbleTime % 0.8) / 0.8; // 0.8 second bubble cycle
+              
+              // Float upward
+              bubbleMesh.position.y = bubbleProgress * 3;
+              
+              // Gentle floating motion
+              bubbleMesh.position.x += Math.sin(t * 2 + index) * 0.01;
+              bubbleMesh.position.z += Math.cos(t * 2 + index) * 0.01;
+              
+              // Scale and fade
+              const bubbleScale = 0.3 + bubbleProgress * 0.7;
+              const bubbleOpacity = 1 - bubbleProgress;
+              bubbleMesh.scale.setScalar(bubbleScale);
+              
+              if (bubbleMesh.material instanceof THREE.MeshStandardMaterial) {
+                bubbleMesh.material.transparent = true;
+                bubbleMesh.material.opacity = bubbleOpacity;
+              }
+            });
+          }
         } else {
-          // Completely hide the player
+          // Completely hide the player and bubbles
           if (group.current) {
             group.current.visible = false;
+          }
+          if (bubblesRef.current) {
+            bubblesRef.current.visible = false;
           }
         }
       } else {
@@ -216,6 +273,8 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
         <boxGeometry args={[0.18, 0.12, 0.28]} />
         <meshStandardMaterial color="#111" />
       </mesh>
+      {/* Magical bubbles for disappearing effect */}
+      <group ref={bubblesRef} />
     </group>
   );
 }
