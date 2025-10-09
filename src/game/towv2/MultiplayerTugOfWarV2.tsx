@@ -266,7 +266,7 @@ export const MultiplayerTugOfWarV2 = () => {
         {phase === 'positioning' && (
           <>
             <button className="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1 rounded" onClick={() => chooseTeam('red')}>Join Red</button>
-            <button className="bg-sky-600 hover:bg-sky-700 text-white px-3 py-1 rounded" onClick={() => chooseTeam('blue')}>Join Blue</button>
+            <button className="bg-sky-600 hover:bg-sky-700 text-white px-3 py-1 rounded" onClick={() => chooseTeam('blue')}>Join Green</button>
           </>
         )}
       </div>
