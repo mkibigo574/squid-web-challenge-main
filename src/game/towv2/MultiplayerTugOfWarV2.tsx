@@ -99,6 +99,9 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
         baseY += floatBob;
       }
       
+      // Position players so their hands align with the rope
+      // The rope is at PLAYER_BASE_Y + HAND_LOCAL_Y, so players need to be at PLAYER_BASE_Y
+      // to have their hands at the rope level
       currentYRef.current = baseY + Math.max(0, bob);
       vyRef.current = 0;
       hasDetachedRef.current = false;
@@ -107,6 +110,7 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       // Reset position to rope position when reattached
       currentXRef.current = x;
       if (group.current) {
+        group.current.position.y = currentYRef.current;
         group.current.rotation.z = lean;
         group.current.visible = true; // Make sure player is visible
         group.current.scale.setScalar(1); // Reset scale
@@ -239,7 +243,10 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
         }
       }
       
-      if (group.current) group.current.rotation.z = 0;
+          if (group.current) {
+            group.current.position.y = currentYRef.current;
+            group.current.rotation.z = 0;
+          }
     }
     // Head tilt based on effort
     if (headRef.current) {
