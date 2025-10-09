@@ -72,6 +72,8 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
   const currentYRef = useRef<number>(PLAYER_BASE_Y);
   const vyRef = useRef<number>(0);
   const hasDetachedRef = useRef<boolean>(false);
+  const isDisappearingRef = useRef<boolean>(false);
+  const disappearStartTimeRef = useRef<number>(0);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
@@ -84,7 +86,12 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       currentYRef.current = PLAYER_BASE_Y + Math.max(0, bob);
       vyRef.current = 0;
       hasDetachedRef.current = false;
-      if (group.current) group.current.rotation.z = lean;
+      isDisappearingRef.current = false; // Reset disappearing state
+      if (group.current) {
+        group.current.rotation.z = lean;
+        group.current.visible = true; // Make sure player is visible
+        group.current.scale.setScalar(1); // Reset scale
+      }
       const jitter = Math.sin(t * 24 + x * 0.3) * 0.04 * effort;
       if (leftHand.current) leftHand.current.position.x = -0.06 + jitter;
       if (rightHand.current) rightHand.current.position.x = 0.06 - jitter;
@@ -102,12 +109,61 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       vyRef.current -= 0.012; // gravity accel
       currentYRef.current += vyRef.current;
       
-      // Clamp to floor
-      const minY = floorY + 0.2;
-      if (currentYRef.current <= minY) {
-        currentYRef.current = minY;
-        vyRef.current = 0;
+      // Check if player hits the chainsaw level (Y = -5)
+      const chainsawY = -5;
+      if (!isDisappearingRef.current && currentYRef.current <= chainsawY) {
+        isDisappearingRef.current = true;
+        disappearStartTimeRef.current = t;
       }
+      
+      // Magical disappearing effect
+      if (isDisappearingRef.current) {
+        const disappearTime = t - disappearStartTimeRef.current;
+        const disappearDuration = 1.0; // 1 second disappearing effect
+        
+        if (disappearTime < disappearDuration) {
+          // Fade out and scale down with magical effect
+          const progress = disappearTime / disappearDuration;
+          const scale = 1 - progress;
+          const opacity = 1 - progress;
+          
+          if (group.current) {
+            group.current.scale.setScalar(scale);
+            group.current.rotation.y += 0.1; // Spinning while disappearing
+            group.current.rotation.x += 0.05;
+            
+            // Apply opacity to all materials
+            group.current.traverse((child) => {
+              if (child instanceof THREE.Mesh && child.material) {
+                if (Array.isArray(child.material)) {
+                  child.material.forEach(mat => {
+                    if (mat instanceof THREE.MeshStandardMaterial) {
+                      mat.transparent = true;
+                      mat.opacity = opacity;
+                    }
+                  });
+                } else if (child.material instanceof THREE.MeshStandardMaterial) {
+                  child.material.transparent = true;
+                  child.material.opacity = opacity;
+                }
+              }
+            });
+          }
+        } else {
+          // Completely hide the player
+          if (group.current) {
+            group.current.visible = false;
+          }
+        }
+      } else {
+        // Clamp to floor if not disappearing
+        const minY = floorY + 0.2;
+        if (currentYRef.current <= minY) {
+          currentYRef.current = minY;
+          vyRef.current = 0;
+        }
+      }
+      
       if (group.current) group.current.rotation.z = 0;
     }
     // Head tilt based on effort
