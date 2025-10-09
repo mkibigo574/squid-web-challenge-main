@@ -29,7 +29,7 @@ function Rope({ value, phase = 'pulling' }: { value: number; phase?: string }) {
     if (!group.current) return;
     // Align rope height to player hand height above the platform
     let ropeY = PLAYER_BASE_Y + HAND_LOCAL_Y;
-    if (phase === 'floating') {
+    if (phase === 'floating' || phase === 'positioning') {
       ropeY += FLOATING_OFFSET;
     }
     group.current.position.set(0, ropeY, 0);
@@ -90,9 +90,9 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       const lean = sideSign * effort * 0.32 + Math.sin(t * 8 + (x + z)) * 0.05 * effort;
       const bob = Math.sin(t * 12 + x) * 0.06 * effort;
       
-      // Handle floating phase
+      // Handle floating phase (floating during floating and positioning phases)
       let baseY = PLAYER_BASE_Y;
-      if (phase === 'floating') {
+      if (phase === 'floating' || phase === 'positioning') {
         baseY = PLAYER_BASE_Y + FLOATING_OFFSET;
         // Gentle floating animation
         const floatBob = Math.sin(t * 3) * 0.1;
@@ -395,7 +395,7 @@ export const MultiplayerTugOfWarV2 = () => {
       <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/90 text-sm bg-black/60 px-3 py-1 rounded">
         {phase === 'lobby' && 'Waiting for players...'}
         {phase === 'floating' && 'Players floating above platforms - Get ready!'}
-        {phase === 'positioning' && `Get ready! (${countdown})`}
+        {phase === 'positioning' && `Choose your team! Game starts in ${countdown}...`}
         {phase === 'pulling' && 'Tug of War!'}
         {phase === 'falling' && 'Players falling...'}
         {phase === 'results' && `Winner: ${winner === 'blue' ? 'Green' : winner === 'red' ? 'Red' : '—'}`}

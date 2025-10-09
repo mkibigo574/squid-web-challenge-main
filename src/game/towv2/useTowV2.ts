@@ -120,7 +120,7 @@ export function useTowV2() {
   const start = useCallback(() => {
     if (!host) return;
     if (phase === 'floating') {
-      // Transition from floating to positioning
+      // Transition from floating to positioning (still floating)
       setPhase('positioning');
       setCountdown(3);
       setWinner(null);
