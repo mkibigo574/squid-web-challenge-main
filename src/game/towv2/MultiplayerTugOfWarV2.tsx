@@ -286,12 +286,12 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
     // Apply computed position
     if (group.current) {
       group.current.position.set(currentXRef.current, currentYRef.current, z);
-      group.current.rotation.y = rotationY;
+      // Don't set rotation in useFrame - it's set in JSX
     }
   });
 
   return (
-    <group ref={group} position={[x, 0, z]}>
+    <group ref={group} position={[x, 0, z]} rotation={[0, rotationY, 0]}>
       {/* body */}
       <mesh position={[0, 0.9, 0]} castShadow>
         <capsuleGeometry args={[0.35, 0.8, 4, 10]} />
