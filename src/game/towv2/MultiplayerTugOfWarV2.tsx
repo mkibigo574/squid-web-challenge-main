@@ -115,7 +115,7 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       // Reset position to rope position when reattached
       currentXRef.current = x;
       if (group.current) {
-        group.current.position.y = currentYRef.current;
+        group.current.position.set(currentXRef.current, currentYRef.current, z);
         group.current.rotation.z = lean;
         group.current.visible = true; // Make sure player is visible
         group.current.scale.setScalar(1); // Reset scale
@@ -266,7 +266,7 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       }
       
           if (group.current) {
-            group.current.position.y = currentYRef.current;
+            group.current.position.set(currentXRef.current, currentYRef.current, z);
             group.current.rotation.z = 0;
           }
     }
@@ -291,7 +291,7 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
   });
 
   return (
-    <group ref={group} position={[x, PLAYER_BASE_Y, z]} rotation={[0, rotationY, 0]}>
+    <group ref={group} position={[x, 0, z]} rotation={[0, rotationY, 0]}>
       {/* body */}
       <mesh position={[0, 0.9, 0]} castShadow>
         <capsuleGeometry args={[0.35, 0.8, 4, 10]} />
