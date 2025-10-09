@@ -33,15 +33,6 @@ function Rope({ value, phase = 'pulling' }: { value: number; phase?: string }) {
       ropeY += FLOATING_OFFSET;
     }
     group.current.position.set(0, ropeY, 0);
-    
-    // Debug: Log rope positioning
-    console.log('Rope positioning debug:', {
-      ropeY,
-      phase,
-      PLAYER_BASE_Y,
-      HAND_LOCAL_Y,
-      FLOATING_OFFSET
-    });
   });
 
   const spacing = 0.35;
@@ -117,17 +108,6 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       // Player hands are at HAND_LOCAL_Y relative to player group
       // So player group should be at: ropeY - HAND_LOCAL_Y
       currentYRef.current = ropeY - HAND_LOCAL_Y + Math.max(0, bob);
-      
-      // Debug: Log positioning for first player
-      if (side === 'left' && playerIndex === 0) {
-        console.log('Player positioning debug:', {
-          ropeY,
-          playerY: currentYRef.current,
-          handY: currentYRef.current + HAND_LOCAL_Y,
-          phase,
-          detached
-        });
-      }
       vyRef.current = 0;
       hasDetachedRef.current = false;
       isDisappearingRef.current = false; // Reset disappearing state
@@ -162,8 +142,8 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
         bubblesRef.current.visible = true; // Make sure bubbles are visible
       }
       const jitter = Math.sin(t * 24 + x * 0.3) * 0.04 * effort;
-      if (leftHand.current) leftHand.current.position.x = -0.06 + jitter;
-      if (rightHand.current) rightHand.current.position.x = 0.06 - jitter;
+      if (leftHand.current) leftHand.current.position.x = -0.1 + jitter;
+      if (rightHand.current) rightHand.current.position.x = 0.1 - jitter;
     } else {
       // Falling physics after detachment
       if (!hasDetachedRef.current) {
@@ -322,12 +302,12 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
         <sphereGeometry args={[0.32, 16, 16]} />
         <meshStandardMaterial color="#222" />
       </mesh>
-      {/* hands gripping rope (around rope along z axis) */}
-      <mesh ref={rightHand} position={[0, 1.2, 0.1]}>
+      {/* hands gripping rope (around rope along x axis) */}
+      <mesh ref={rightHand} position={[0.1, 1.2, 0]}>
         <sphereGeometry args={[0.1, 12, 12]} />
         <meshStandardMaterial color="#eee" />
       </mesh>
-      <mesh ref={leftHand} position={[0, 1.2, -0.1]}>
+      <mesh ref={leftHand} position={[-0.1, 1.2, 0]}>
         <sphereGeometry args={[0.1, 12, 12]} />
         <meshStandardMaterial color="#eee" />
       </mesh>
