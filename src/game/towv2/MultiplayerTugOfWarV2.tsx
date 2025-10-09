@@ -108,6 +108,19 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       // Player hands are at HAND_LOCAL_Y relative to player group
       // So player group should be at: ropeY - HAND_LOCAL_Y
       currentYRef.current = ropeY - HAND_LOCAL_Y + Math.max(0, bob);
+      
+      // Debug: Log hand positions for first player
+      if (side === 'left' && playerIndex === 0) {
+        console.log('Hand positioning debug:', {
+          playerX: currentXRef.current,
+          playerY: currentYRef.current,
+          leftHandX: currentXRef.current - 0.1,
+          rightHandX: currentXRef.current + 0.1,
+          handY: currentYRef.current + HAND_LOCAL_Y,
+          ropeY,
+          phase
+        });
+      }
       vyRef.current = 0;
       hasDetachedRef.current = false;
       isDisappearingRef.current = false; // Reset disappearing state
@@ -334,16 +347,6 @@ function TeamPlayers({ rope, redEffort, blueEffort, detachedRed, detachedBlue, p
   const rightOffsets = [3.8 + shift, 3.0 + shift, 2.2 + shift];
   const z = 0; // keep all players aligned with rope (no cross-rope spacing)
   
-  // Debug: Log rope positioning for team players
-  console.log('TeamPlayers positioning:', {
-    rope,
-    ropeCenterX,
-    leftOffsets,
-    rightOffsets,
-    leftPositions: leftOffsets.map(ox => ropeCenterX + ox),
-    rightPositions: rightOffsets.map(ox => ropeCenterX + ox),
-    phase
-  });
 
   return (
     <group>
