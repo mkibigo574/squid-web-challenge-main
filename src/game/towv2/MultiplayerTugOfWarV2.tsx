@@ -33,15 +33,6 @@ function Rope({ value, phase = 'pulling' }: { value: number; phase?: string }) {
       ropeY += FLOATING_OFFSET;
     }
     group.current.position.set(0, ropeY, 0);
-    
-    // Debug: Log rope positioning
-    console.log('Rope positioning:', {
-      ropeY,
-      phase,
-      PLAYER_BASE_Y,
-      HAND_LOCAL_Y,
-      FLOATING_OFFSET
-    });
   });
 
   const spacing = 0.35;
@@ -109,20 +100,14 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       }
       
       // Position players so their hands align with the rope
-      // The rope is at PLAYER_BASE_Y + HAND_LOCAL_Y, so players need to be at PLAYER_BASE_Y
-      // to have their hands at the rope level (hands are at HAND_LOCAL_Y relative to player group)
-      currentYRef.current = baseY + Math.max(0, bob);
-      
-      // Debug: Log player positioning
-      if (side === 'left' && playerIndex === 0) {
-        console.log('Player positioning:', {
-          baseY,
-          currentY: currentYRef.current,
-          ropeY: PLAYER_BASE_Y + HAND_LOCAL_Y,
-          phase,
-          detached
-        });
+      // The rope is at PLAYER_BASE_Y + HAND_LOCAL_Y + (FLOATING_OFFSET if floating/positioning)
+      // Player hands are at HAND_LOCAL_Y relative to player group
+      // So player group should be at: ropeY - HAND_LOCAL_Y
+      let ropeY = PLAYER_BASE_Y + HAND_LOCAL_Y;
+      if (phase === 'floating' || phase === 'positioning') {
+        ropeY += FLOATING_OFFSET;
       }
+      currentYRef.current = ropeY - HAND_LOCAL_Y + Math.max(0, bob);
       vyRef.current = 0;
       hasDetachedRef.current = false;
       isDisappearingRef.current = false; // Reset disappearing state
