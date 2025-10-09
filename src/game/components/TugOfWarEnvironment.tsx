@@ -24,7 +24,7 @@ export const TugOfWarEnvironment = () => {
     // Rotate the chainsaw chain
     if (chainsawRef.current) {
       const t = state.clock.elapsedTime;
-      chainsawRef.current.rotation.y = t * 8; // Fast rotation
+      chainsawRef.current.rotation.y = t * 15; // Very fast, dangerous rotation
     }
   });
 
@@ -127,14 +127,38 @@ export const TugOfWarEnvironment = () => {
                   </mesh>
                 );
               })}
-              {/* Sharp teeth - same as original */}
-              {Array.from({ length: 32 }, (_, j) => {
-                const toothAngle = (j / 32) * Math.PI * 2;
+              {/* Sharp teeth - more aggressive and dangerous */}
+              {Array.from({ length: 48 }, (_, j) => {
+                const toothAngle = (j / 48) * Math.PI * 2;
                 const x = Math.cos(toothAngle) * 0.5;
                 const z = Math.sin(toothAngle) * 0.5;
                 return (
                   <mesh key={`blade-tooth-${j}`} position={[x, 0, z]} rotation={[0, toothAngle, 0]}>
-                    <coneGeometry args={[0.04, 0.15, 4]} />
+                    <coneGeometry args={[0.06, 0.25, 4]} />
+                    <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
+                  </mesh>
+                );
+              })}
+              {/* Additional razor-sharp edges */}
+              {Array.from({ length: 24 }, (_, j) => {
+                const edgeAngle = (j / 24) * Math.PI * 2;
+                const x = Math.cos(edgeAngle) * 0.45;
+                const z = Math.sin(edgeAngle) * 0.45;
+                return (
+                  <mesh key={`blade-edge-${j}`} position={[x, 0, z]} rotation={[0, edgeAngle, 0]}>
+                    <boxGeometry args={[0.02, 0.3, 0.02]} />
+                    <meshStandardMaterial color="#cc0000" metalness={0.9} roughness={0.1} />
+                  </mesh>
+                );
+              })}
+              {/* Spinning blade tips - extra sharp points */}
+              {Array.from({ length: 8 }, (_, j) => {
+                const tipAngle = (j / 8) * Math.PI * 2;
+                const x = Math.cos(tipAngle) * 0.6;
+                const z = Math.sin(tipAngle) * 0.6;
+                return (
+                  <mesh key={`blade-tip-${j}`} position={[x, 0, z]} rotation={[0, tipAngle, 0]}>
+                    <octahedronGeometry args={[0.08]} />
                     <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
                   </mesh>
                 );
@@ -155,14 +179,38 @@ export const TugOfWarEnvironment = () => {
             </mesh>
           );
         })}
-        {/* Sharp teeth */}
-        {Array.from({ length: 32 }, (_, i) => {
-          const angle = (i / 32) * Math.PI * 2;
+        {/* Sharp teeth - more aggressive and dangerous */}
+        {Array.from({ length: 48 }, (_, i) => {
+          const angle = (i / 48) * Math.PI * 2;
           const x = Math.cos(angle) * 0.5;
           const z = Math.sin(angle) * 0.5;
           return (
             <mesh key={`tooth-${i}`} position={[x, 0, z]} rotation={[0, angle, 0]}>
-              <coneGeometry args={[0.04, 0.15, 4]} />
+              <coneGeometry args={[0.06, 0.25, 4]} />
+              <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
+            </mesh>
+          );
+        })}
+        {/* Additional razor-sharp edges */}
+        {Array.from({ length: 24 }, (_, i) => {
+          const edgeAngle = (i / 24) * Math.PI * 2;
+          const x = Math.cos(edgeAngle) * 0.45;
+          const z = Math.sin(edgeAngle) * 0.45;
+          return (
+            <mesh key={`edge-${i}`} position={[x, 0, z]} rotation={[0, edgeAngle, 0]}>
+              <boxGeometry args={[0.02, 0.3, 0.02]} />
+              <meshStandardMaterial color="#cc0000" metalness={0.9} roughness={0.1} />
+            </mesh>
+          );
+        })}
+        {/* Spinning blade tips - extra sharp points */}
+        {Array.from({ length: 8 }, (_, i) => {
+          const tipAngle = (i / 8) * Math.PI * 2;
+          const x = Math.cos(tipAngle) * 0.6;
+          const z = Math.sin(tipAngle) * 0.6;
+          return (
+            <mesh key={`tip-${i}`} position={[x, 0, z]} rotation={[0, tipAngle, 0]}>
+              <octahedronGeometry args={[0.08]} />
               <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
             </mesh>
           );
