@@ -6,8 +6,8 @@ export type V2Phase = 'lobby' | 'positioning' | 'floating' | 'pulling' | 'fallin
 export type V2Player = {
   id: string;
   name?: string;
-  team: 'red' | 'blue';
-  position: number; // index along rope (-8..8 world units semantics)
+  team?: 'red' | 'blue';
+  position?: number; // index along rope (-8..8 world units semantics)
   pullPower: number; // 0..1
   isPulling: boolean;
 };
@@ -30,8 +30,10 @@ export function useTowV2() {
       const mapped: V2Player[] = raw.map((p, idx) => ({
         id: p.id,
         name: p.name,
-        team: (p.position ?? (idx % 2 === 0 ? -1 : 1)) < 0 ? 'red' : 'blue',
-        position: typeof p.position === 'number' ? p.position : (idx % 2 === 0 ? -6 : 6),
+        team: p.position !== undefined && p.position !== null ? 
+          (p.position < 0 ? 'red' : 'blue') : 
+          undefined,
+        position: p.position, // Don't set default position - keep undefined if not set
         pullPower: typeof p.pullStrength === 'number' ? p.pullStrength : 0,
         isPulling: !!p.isPulling,
       }));
@@ -137,7 +139,10 @@ export function useTowV2() {
 
   // Check if all players have selected teams
   const allPlayersHaveTeams = useMemo(() => {
-    return players.length > 0 && players.every(p => p.position !== undefined && p.position !== null);
+    return players.length > 0 && players.every(p => 
+      p.position !== undefined && p.position !== null && 
+      p.team !== undefined && p.team !== null
+    );
   }, [players]);
 
   // Auto-start floating when all players have selected teams
