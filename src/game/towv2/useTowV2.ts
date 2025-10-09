@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { multiplayerManager } from '@/lib/multiplayer';
 
-export type V2Phase = 'lobby' | 'positioning' | 'pulling' | 'falling' | 'results';
+export type V2Phase = 'lobby' | 'positioning' | 'floating' | 'pulling' | 'falling' | 'results';
 
 export type V2Player = {
   id: string;
@@ -117,8 +117,13 @@ export function useTowV2() {
     setRope(0);
     multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'positioning', countdown: 3, rope: 0, winner: null });
     setTimeout(() => {
-      setPhase('pulling');
-      multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'pulling', rope: 0 });
+      setPhase('floating');
+      setCountdown(3);
+      multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'floating', countdown: 3, rope: 0 });
+      setTimeout(() => {
+        setPhase('pulling');
+        multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'pulling', rope: 0 });
+      }, 3000);
     }, 3000);
   }, [host]);
 

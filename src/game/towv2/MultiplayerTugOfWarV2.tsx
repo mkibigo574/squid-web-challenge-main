@@ -10,8 +10,9 @@ const PLATFORM_TOP_Y = 9.8; // lowered platforms by -2 → new top
 const PLAYER_BASE_Y = PLATFORM_TOP_Y - 0.2; // feet center at 0.2 → base so soles rest on top
 const HAND_LOCAL_Y = 1.2; // hands relative to player group
 const BROWN_FLOOR_TOP_Y = -6 + 0.4; // central brown deck positioned at -6 with thickness 0.8
+const FLOATING_OFFSET = 2.0; // how high players float above platforms during floating phase
 
-function Rope({ value }: { value: number }) {
+function Rope({ value, phase = 'pulling' }: { value: number; phase?: string }) {
   // Dynamic rope that anchors to outermost players on each side
   const group = useRef<THREE.Group>(null);
   const ropeCenterX = value * 10;
@@ -27,7 +28,11 @@ function Rope({ value }: { value: number }) {
   useFrame(() => {
     if (!group.current) return;
     // Align rope height to player hand height above the platform
-    group.current.position.set(0, PLAYER_BASE_Y + HAND_LOCAL_Y, 0);
+    let ropeY = PLAYER_BASE_Y + HAND_LOCAL_Y;
+    if (phase === 'floating') {
+      ropeY += FLOATING_OFFSET;
+    }
+    group.current.position.set(0, ropeY, 0);
   });
 
   const spacing = 0.35;
@@ -61,7 +66,7 @@ function Rope({ value }: { value: number }) {
   );
 }
 
-function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as 'left'|'right', detached = false, floorY = BROWN_FLOOR_TOP_Y, playerIndex = 0 }) {
+function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as 'left'|'right', detached = false, floorY = BROWN_FLOOR_TOP_Y, playerIndex = 0, phase = 'pulling' }) {
   const group = useRef<THREE.Group>(null);
   const leftHand = useRef<THREE.Mesh>(null);
   const rightHand = useRef<THREE.Mesh>(null);
@@ -84,7 +89,17 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       const sideSign = side === 'left' ? -1 : 1;
       const lean = sideSign * effort * 0.32 + Math.sin(t * 8 + (x + z)) * 0.05 * effort;
       const bob = Math.sin(t * 12 + x) * 0.06 * effort;
-      currentYRef.current = PLAYER_BASE_Y + Math.max(0, bob);
+      
+      // Handle floating phase
+      let baseY = PLAYER_BASE_Y;
+      if (phase === 'floating') {
+        baseY = PLAYER_BASE_Y + FLOATING_OFFSET;
+        // Gentle floating animation
+        const floatBob = Math.sin(t * 3) * 0.1;
+        baseY += floatBob;
+      }
+      
+      currentYRef.current = baseY + Math.max(0, bob);
       vyRef.current = 0;
       hasDetachedRef.current = false;
       isDisappearingRef.current = false; // Reset disappearing state
@@ -279,7 +294,7 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
   );
 }
 
-function TeamPlayers({ rope, redEffort, blueEffort, detachedRed, detachedBlue }: { rope: number; redEffort: number; blueEffort: number; detachedRed: boolean; detachedBlue: boolean }) {
+function TeamPlayers({ rope, redEffort, blueEffort, detachedRed, detachedBlue, phase }: { rope: number; redEffort: number; blueEffort: number; detachedRed: boolean; detachedBlue: boolean; phase: string }) {
   // Rope runs along X at z=0; distribute players ALONG the rope near each side
   const ropeCenterX = rope * 10;
   const shift = 9.0; // increased by 1 unit total (0.5 per side)
@@ -290,10 +305,10 @@ function TeamPlayers({ rope, redEffort, blueEffort, detachedRed, detachedBlue }:
   return (
     <group>
       {leftOffsets.map((ox, i) => (
-        <SimplePlayer key={`L${i}`} x={ropeCenterX + ox} z={z} color="#dc2626" rotationY={0} effort={redEffort} side="left" detached={detachedRed} floorY={BROWN_FLOOR_TOP_Y} playerIndex={i} />
+        <SimplePlayer key={`L${i}`} x={ropeCenterX + ox} z={z} color="#dc2626" rotationY={0} effort={redEffort} side="left" detached={detachedRed} floorY={BROWN_FLOOR_TOP_Y} playerIndex={i} phase={phase} />
       ))}
       {rightOffsets.map((ox, i) => (
-        <SimplePlayer key={`R${i}`} x={ropeCenterX + ox} z={z} color="#16a34a" rotationY={Math.PI} effort={blueEffort} side="right" detached={detachedBlue} floorY={BROWN_FLOOR_TOP_Y} playerIndex={i + 3} />
+        <SimplePlayer key={`R${i}`} x={ropeCenterX + ox} z={z} color="#16a34a" rotationY={Math.PI} effort={blueEffort} side="right" detached={detachedBlue} floorY={BROWN_FLOOR_TOP_Y} playerIndex={i + 3} phase={phase} />
       ))}
     </group>
   );
@@ -370,15 +385,15 @@ export const MultiplayerTugOfWarV2 = () => {
         })()}
         <ambientLight intensity={0.35} />
         <TugOfWarEnvironment />
-        <Rope value={rope} />
+        <Rope value={rope} phase={phase} />
         {/* Teams of 3 whose hands align to rope segments near each side */}
         {(() => { const redEff = Math.min(1, Math.max(0, players?.filter((p: any) => p.team === 'red' && p.isPulling).reduce((s: number, p: any) => s + (p.pullPower || 0), 0) / 3 || 0));
                   const blueEff = Math.min(1, Math.max(0, players?.filter((p: any) => p.team === 'blue' && p.isPulling).reduce((s: number, p: any) => s + (p.pullPower || 0), 0) / 3 || 0));
-                  return <TeamPlayers rope={rope} redEffort={redEff} blueEffort={blueEff} detachedRed={detachedRed} detachedBlue={detachedBlue} />; })()}
+                  return <TeamPlayers rope={rope} redEffort={redEff} blueEffort={blueEff} detachedRed={detachedRed} detachedBlue={detachedBlue} phase={phase} />; })()}
       </Canvas>
 
       <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/90 text-sm bg-black/60 px-3 py-1 rounded">
-        Phase: {phase} {phase === 'positioning' ? `(starts in ${countdown})` : phase === 'falling' ? '(players falling...)' : ''}
+        Phase: {phase} {phase === 'positioning' ? `(starts in ${countdown})` : phase === 'floating' ? `(floating in ${countdown})` : phase === 'falling' ? '(players falling...)' : ''}
       </div>
       <div className="absolute top-4 left-4 flex gap-2">
         <button className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded" onClick={start}>Start</button>
