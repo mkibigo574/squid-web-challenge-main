@@ -104,6 +104,33 @@ export const TugOfWarEnvironment = () => {
           <cylinderGeometry args={[0.3, 0.3, 12]} />
           <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
         </mesh>
+        
+        {/* Helicopter-style blades */}
+        {Array.from({ length: 4 }, (_, i) => {
+          const angle = (i / 4) * Math.PI * 2;
+          return (
+            <group key={`blade-${i}`} rotation={[0, angle, 0]}>
+              {/* Main blade */}
+              <mesh position={[0, 0, 0]}>
+                <boxGeometry args={[0.1, 0.05, 6]} />
+                <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
+              </mesh>
+              {/* Blade tip with sharp edge */}
+              <mesh position={[0, 0, 3]}>
+                <boxGeometry args={[0.15, 0.08, 0.5]} />
+                <meshStandardMaterial color="#cc0000" metalness={0.9} roughness={0.1} />
+              </mesh>
+              {/* Sharp teeth along blade edge */}
+              {Array.from({ length: 8 }, (_, j) => (
+                <mesh key={`blade-tooth-${j}`} position={[0, 0, -2.5 + j * 0.7]}>
+                  <coneGeometry args={[0.02, 0.1, 4]} />
+                  <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
+                </mesh>
+              ))}
+            </group>
+          );
+        })}
+        
         {/* Chain links around the cylinder */}
         {Array.from({ length: 16 }, (_, i) => {
           const angle = (i / 16) * Math.PI * 2;
