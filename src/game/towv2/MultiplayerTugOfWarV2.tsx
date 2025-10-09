@@ -402,7 +402,7 @@ export const MultiplayerTugOfWarV2 = () => {
       </div>
       <div className="absolute top-4 left-4 flex gap-2">
         {phase === 'floating' && (
-          <button className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded" onClick={start}>Start Game</button>
+          <button className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded" onClick={start}>Choose your Team</button>
         )}
         {phase === 'positioning' && (
           <>
