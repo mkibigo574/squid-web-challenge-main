@@ -22,6 +22,27 @@ export function useTowV2() {
 
   const selfIdRef = useRef<string>(multiplayerManager.getSelfId() || crypto.randomUUID());
   const lastUpdateRef = useRef<number>(0);
+  const phaseRef = useRef<V2Phase>(phase);
+  const hostRef = useRef<boolean>(host);
+  const lastBroadcastRef = useRef<string>('');
+
+  // Update refs when values change
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+
+  useEffect(() => {
+    hostRef.current = host;
+  }, [host]);
+
+  // Helper function to prevent duplicate broadcasts
+  const broadcastState = useCallback((state: any) => {
+    const stateKey = JSON.stringify(state);
+    if (stateKey !== lastBroadcastRef.current) {
+      lastBroadcastRef.current = stateKey;
+      multiplayerManager.broadcast('game_state_changed', state);
+    }
+  }, []);
 
   // subscribe to presence and events
   useEffect(() => {
@@ -38,10 +59,10 @@ export function useTowV2() {
       setPlayers(mapped);
       
       // Auto-transition to floating phase when players join
-      if (mapped.length > 0 && phase === 'lobby') {
+      if (mapped.length > 0 && phaseRef.current === 'lobby') {
         setPhase('floating');
-        if (host) {
-          multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'floating' });
+        if (hostRef.current) {
+          broadcastState({ v2: true, phase: 'floating' });
         }
       }
     };
@@ -90,11 +111,11 @@ export function useTowV2() {
         setRope(next);
         setPhase('falling'); // new phase for falling animation
         setWinner('blue');
-        multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'falling', rope: next, winner: 'blue' });
+        broadcastState({ v2: true, phase: 'falling', rope: next, winner: 'blue' });
         // Delay before showing results to allow falling animation
         setTimeout(() => {
           setPhase('results');
-          multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'results', rope: next, winner: 'blue' });
+          broadcastState({ v2: true, phase: 'results', rope: next, winner: 'blue' });
         }, 3000); // 3 seconds for falling animation
         return;
       }
@@ -103,19 +124,19 @@ export function useTowV2() {
         setRope(next);
         setPhase('falling'); // new phase for falling animation
         setWinner('red');
-        multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'falling', rope: next, winner: 'red' });
+        broadcastState({ v2: true, phase: 'falling', rope: next, winner: 'red' });
         // Delay before showing results to allow falling animation
         setTimeout(() => {
           setPhase('results');
-          multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'results', rope: next, winner: 'red' });
+          broadcastState({ v2: true, phase: 'results', rope: next, winner: 'red' });
         }, 3000); // 3 seconds for falling animation
         return;
       }
       setRope(next);
-      multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'pulling', rope: next });
+      broadcastState({ v2: true, phase: 'pulling', rope: next });
     }, 100);
     return () => clearInterval(id);
-  }, [host, phase, players, rope]);
+  }, [host, phase, players, rope, broadcastState]);
 
   const start = useCallback(() => {
     if (!host) return;
@@ -125,9 +146,9 @@ export function useTowV2() {
       setCountdown(0);
       setWinner(null);
       setRope(0);
-      multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'positioning', countdown: 0, rope: 0, winner: null });
+      broadcastState({ v2: true, phase: 'positioning', countdown: 0, rope: 0, winner: null });
     }
-  }, [host, phase]);
+  }, [host, phase, broadcastState]);
 
   const setSelfPulling = useCallback((isPulling: boolean, power: number) => {
     multiplayerManager.updatePresence({
@@ -146,17 +167,17 @@ export function useTowV2() {
     if (!host) return;
     if (phase === 'positioning') {
       setPhase('pulling');
-      multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'pulling', rope: 0 });
+      broadcastState({ v2: true, phase: 'pulling', rope: 0 });
     }
-  }, [host, phase]);
+  }, [host, phase, broadcastState]);
 
   const reset = useCallback(() => {
     if (!host) return;
     setPhase('lobby');
     setWinner(null);
     setRope(0);
-    multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'lobby', rope: 0, winner: null });
-  }, [host]);
+    broadcastState({ v2: true, phase: 'lobby', rope: 0, winner: null });
+  }, [host, broadcastState]);
 
   return {
     phase,
