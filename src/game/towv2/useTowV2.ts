@@ -26,6 +26,7 @@ export function useTowV2() {
   // subscribe to presence and events
   useEffect(() => {
     const onPlayers = (raw: any[]) => {
+      console.log('Raw presence data:', raw);
       // Derive team by sign of initial position; fallback alternate assignment
       const mapped: V2Player[] = raw.map((p, idx) => ({
         id: p.id,
@@ -37,6 +38,7 @@ export function useTowV2() {
         pullPower: typeof p.pullStrength === 'number' ? p.pullStrength : 0,
         isPulling: !!p.isPulling,
       }));
+      console.log('Mapped players:', mapped);
       setPlayers(mapped);
     };
     const onRope = (payload: any) => {
@@ -134,15 +136,19 @@ export function useTowV2() {
 
   const chooseTeam = useCallback((team: 'red' | 'blue') => {
     const position = team === 'red' ? -6 : 6;
+    console.log('Choosing team:', team, 'position:', position);
     multiplayerManager.updatePresence({ position });
   }, []);
 
   // Check if all players have selected teams
   const allPlayersHaveTeams = useMemo(() => {
-    return players.length > 0 && players.every(p => 
+    const result = players.length > 0 && players.every(p => 
       p.position !== undefined && p.position !== null && 
       p.team !== undefined && p.team !== null
     );
+    console.log('Players:', players);
+    console.log('All players have teams:', result);
+    return result;
   }, [players]);
 
   // Auto-start floating when all players have selected teams
