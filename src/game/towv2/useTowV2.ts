@@ -107,6 +107,13 @@ export function useTowV2() {
     };
   }, []);
 
+  // Reset rope to center when game resets
+  useEffect(() => {
+    if (phase === 'lobby' || phase === 'floating') {
+      setRope(0);
+    }
+  }, [phase]);
+
   // compute rope from players while pulling (host only)
   useEffect(() => {
     if (!host || phase !== 'pulling') return;

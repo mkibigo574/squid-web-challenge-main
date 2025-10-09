@@ -103,6 +103,9 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       vyRef.current = 0;
       hasDetachedRef.current = false;
       isDisappearingRef.current = false; // Reset disappearing state
+      
+      // Reset position to rope position when reattached
+      currentXRef.current = x;
       if (group.current) {
         group.current.rotation.z = lean;
         group.current.visible = true; // Make sure player is visible
@@ -351,10 +354,19 @@ export const MultiplayerTugOfWarV2 = () => {
         setDetachedBlue(true);
       }
     } else {
+      // Reset detachment when not in pulling or falling phases
       setDetachedRed(false);
       setDetachedBlue(false);
     }
   }, [phase, rope, detachedRed, detachedBlue]);
+
+  // Explicitly reset detachment state when game resets
+  useEffect(() => {
+    if (phase === 'lobby' || phase === 'floating') {
+      setDetachedRed(false);
+      setDetachedBlue(false);
+    }
+  }, [phase]);
 
   return (
     <div className="w-full h-screen relative bg-black">
