@@ -382,20 +382,14 @@ export const MultiplayerTugOfWarV2 = () => {
       if (!detachedBlue && rope <= -0.95) {
         setDetachedBlue(true);
       }
-    } else {
-      // Reset detachment when not in pulling or falling phases
+    } else if (phase === 'lobby' || phase === 'floating') {
+      // Only reset detachment when explicitly resetting the game
       setDetachedRed(false);
       setDetachedBlue(false);
     }
+    // Don't reset detachment during 'results' phase - let players stay fallen
   }, [phase, rope, detachedRed, detachedBlue]);
 
-  // Explicitly reset detachment state when game resets
-  useEffect(() => {
-    if (phase === 'lobby' || phase === 'floating') {
-      setDetachedRed(false);
-      setDetachedBlue(false);
-    }
-  }, [phase]);
 
   return (
     <div className="w-full h-screen relative bg-black">
