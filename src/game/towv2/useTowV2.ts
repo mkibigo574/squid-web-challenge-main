@@ -48,20 +48,35 @@ export function useTowV2() {
   // subscribe to presence and events
   useEffect(() => {
     const onPlayers = (raw: any[]) => {
-      // Derive team by sign of initial position; fallback alternate assignment
-      const mapped: V2Player[] = raw.map((p, idx) => ({
-        id: p.id,
-        name: p.name,
-        team: (p.position ?? (idx % 2 === 0 ? -1 : 1)) < 0 ? 'red' : 'blue',
-        position: typeof p.position === 'number' ? p.position : (idx % 2 === 0 ? -6 : 6),
-        pullPower: typeof p.pullStrength === 'number' ? p.pullStrength : 0,
-        isPulling: !!p.isPulling,
-      }));
+      // Derive team by presence team info, then by position, then fallback to alternate assignment
+      const mapped: V2Player[] = raw.map((p, idx) => {
+        let team: 'red' | 'blue';
+        if (p.team === 'red' || p.team === 'blue') {
+          // Use team from presence if available
+          team = p.team;
+        } else if (typeof p.position === 'number') {
+          // Use position to determine team
+          team = p.position < 0 ? 'red' : 'blue';
+        } else {
+          // Fallback to alternate assignment
+          team = idx % 2 === 0 ? 'red' : 'blue';
+        }
+        
+        return {
+          id: p.id,
+          name: p.name,
+          team,
+          position: typeof p.position === 'number' ? p.position : (team === 'red' ? -6 : 6),
+          pullPower: typeof p.pullStrength === 'number' ? p.pullStrength : 0,
+          isPulling: !!p.isPulling,
+        };
+      });
       setPlayers(mapped);
       
       // Auto-transition to floating phase when players join
       if (mapped.length > 0 && phaseRef.current === 'lobby') {
         setPhase('floating');
+        setSelectedTeam(null); // Reset selected team when transitioning to floating
         if (hostRef.current) {
           broadcastState({ v2: true, phase: 'floating' });
         }
@@ -162,7 +177,11 @@ export function useTowV2() {
   const chooseTeam = useCallback((team: 'red' | 'blue') => {
     const position = team === 'red' ? -6 : 6;
     setSelectedTeam(team);
-    multiplayerManager.updatePresence({ position });
+    // Update presence with team info to ensure consistent team assignment
+    multiplayerManager.updatePresence({ 
+      position,
+      team: team // Add team info to presence
+    });
   }, []);
 
   const startGame = useCallback(() => {
