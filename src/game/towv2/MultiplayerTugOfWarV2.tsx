@@ -33,6 +33,15 @@ function Rope({ value, phase = 'pulling' }: { value: number; phase?: string }) {
       ropeY += FLOATING_OFFSET;
     }
     group.current.position.set(0, ropeY, 0);
+    
+    // Debug: Log rope positioning
+    console.log('Rope positioning debug:', {
+      ropeY,
+      leftEndX,
+      rightEndX,
+      ropeCenterX,
+      phase
+    });
   });
 
   const spacing = 0.35;
@@ -108,6 +117,19 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       // Player hands are at HAND_LOCAL_Y relative to player group
       // So player group should be at: ropeY - HAND_LOCAL_Y
       currentYRef.current = ropeY - HAND_LOCAL_Y + Math.max(0, bob);
+      
+      // Debug: Log hand positions for first player
+      if (side === 'left' && playerIndex === 0) {
+        console.log('Hand positioning debug:', {
+          playerX: currentXRef.current,
+          playerY: currentYRef.current,
+          leftHandX: currentXRef.current - 0.1,
+          rightHandX: currentXRef.current + 0.1,
+          handY: currentYRef.current + HAND_LOCAL_Y,
+          ropeY,
+          phase
+        });
+      }
       vyRef.current = 0;
       hasDetachedRef.current = false;
       isDisappearingRef.current = false; // Reset disappearing state
