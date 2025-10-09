@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { multiplayerManager } from '@/lib/multiplayer';
 
-export type V2Phase = 'lobby' | 'positioning' | 'floating' | 'pulling' | 'falling' | 'results';
+export type V2Phase = 'lobby' | 'floating' | 'positioning' | 'pulling' | 'falling' | 'results';
 
 export type V2Player = {
   id: string;
   name?: string;
-  team?: 'red' | 'blue';
-  position?: number; // index along rope (-8..8 world units semantics)
+  team: 'red' | 'blue';
+  position: number; // index along rope (-8..8 world units semantics)
   pullPower: number; // 0..1
   isPulling: boolean;
 };
@@ -26,23 +26,24 @@ export function useTowV2() {
   // subscribe to presence and events
   useEffect(() => {
     const onPlayers = (raw: any[]) => {
-      console.log('Raw presence data:', raw);
       // Derive team by sign of initial position; fallback alternate assignment
-      const mapped: V2Player[] = raw.map((p, idx) => {
-        const hasPosition = p.position !== undefined && p.position !== null;
-        const team = hasPosition ? (p.position < 0 ? 'red' : 'blue') : undefined;
-        console.log(`Player ${p.id}: position=${p.position}, hasPosition=${hasPosition}, team=${team}`);
-        return {
-          id: p.id,
-          name: p.name,
-          team: team,
-          position: p.position, // Don't set default position - keep undefined if not set
-          pullPower: typeof p.pullStrength === 'number' ? p.pullStrength : 0,
-          isPulling: !!p.isPulling,
-        };
-      });
-      console.log('Mapped players:', mapped);
+      const mapped: V2Player[] = raw.map((p, idx) => ({
+        id: p.id,
+        name: p.name,
+        team: (p.position ?? (idx % 2 === 0 ? -1 : 1)) < 0 ? 'red' : 'blue',
+        position: typeof p.position === 'number' ? p.position : (idx % 2 === 0 ? -6 : 6),
+        pullPower: typeof p.pullStrength === 'number' ? p.pullStrength : 0,
+        isPulling: !!p.isPulling,
+      }));
       setPlayers(mapped);
+      
+      // Auto-transition to floating phase when players join
+      if (mapped.length > 0 && phase === 'lobby') {
+        setPhase('floating');
+        if (host) {
+          multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'floating' });
+        }
+      }
     };
     const onRope = (payload: any) => {
       if (typeof payload?.rope === 'number') setRope(Math.max(-1, Math.min(1, payload.rope)));
@@ -118,16 +119,19 @@ export function useTowV2() {
 
   const start = useCallback(() => {
     if (!host) return;
-    setPhase('floating');
-    setCountdown(5); // 5 second countdown: 3, 2, 1, Get Ready, Play
-    setWinner(null);
-    setRope(0);
-    multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'floating', countdown: 5, rope: 0, winner: null });
-    setTimeout(() => {
-      setPhase('pulling');
-      multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'pulling', rope: 0 });
-    }, 5000);
-  }, [host]);
+    if (phase === 'floating') {
+      // Transition from floating to positioning
+      setPhase('positioning');
+      setCountdown(3);
+      setWinner(null);
+      setRope(0);
+      multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'positioning', countdown: 3, rope: 0, winner: null });
+      setTimeout(() => {
+        setPhase('pulling');
+        multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'pulling', rope: 0 });
+      }, 3000);
+    }
+  }, [host, phase]);
 
   const setSelfPulling = useCallback((isPulling: boolean, power: number) => {
     multiplayerManager.updatePresence({
@@ -139,35 +143,8 @@ export function useTowV2() {
 
   const chooseTeam = useCallback((team: 'red' | 'blue') => {
     const position = team === 'red' ? -6 : 6;
-    console.log('Choosing team:', team, 'position:', position);
     multiplayerManager.updatePresence({ position });
   }, []);
-
-  // Check if all players have selected teams
-  const allPlayersHaveTeams = useMemo(() => {
-    const result = players.length > 0 && players.every(p => 
-      p.position !== undefined && p.position !== null && 
-      p.team !== undefined && p.team !== null
-    );
-    console.log('Players:', players);
-    console.log('All players have teams:', result);
-    return result;
-  }, [players]);
-
-  // Auto-start floating when all players have selected teams
-  useEffect(() => {
-    if (host && phase === 'lobby' && allPlayersHaveTeams && players.length >= 2) {
-      setPhase('floating');
-      setCountdown(5);
-      setWinner(null);
-      setRope(0);
-      multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'floating', countdown: 5, rope: 0, winner: null });
-      setTimeout(() => {
-        setPhase('pulling');
-        multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'pulling', rope: 0 });
-      }, 5000);
-    }
-  }, [host, phase, allPlayersHaveTeams, players.length]);
 
   const reset = useCallback(() => {
     if (!host) return;
@@ -188,7 +165,6 @@ export function useTowV2() {
     chooseTeam,
     reset,
     winner,
-    allPlayersHaveTeams,
   };
 }
 
