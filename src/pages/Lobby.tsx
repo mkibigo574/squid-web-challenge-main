@@ -30,9 +30,10 @@ const Lobby = () => {
   };
 
   const createMultiplayerRoom = () => {
-    // If Tug of War is selected, go directly to the Tug of War game page
+    // If Tug of War is selected, go directly to the Tug of War V2 game page
     if (gameType === 'tug-of-war') {
-      navigate('/game/tug-of-war');
+      const code = randomCode();
+      navigate(`/towv2/${code}?name=${encodeURIComponent(name || 'Player')}&id=${encodeURIComponent(playerId)}&creator=true`);
       return;
     }
 
@@ -43,6 +44,13 @@ const Lobby = () => {
   const joinMultiplayerRoom = () => {
     const code = joinCode.trim().toUpperCase();
     if (!code) return;
+    
+    // If Tug of War is selected, go to the Tug of War V2 game page
+    if (gameType === 'tug-of-war') {
+      navigate(`/towv2/${code}?name=${encodeURIComponent(name || 'Player')}&id=${encodeURIComponent(playerId)}`);
+      return;
+    }
+    
     navigate(`/room/${code}/multiplayer?name=${encodeURIComponent(name || 'Player')}&id=${encodeURIComponent(playerId)}&gameType=${gameType}`);
   };
 
@@ -130,7 +138,7 @@ const Lobby = () => {
       <div className="pt-4 text-sm text-gray-500">
         <div>Single-player: <a href="/" className="text-blue-500 underline">Go to game</a></div>
         <div>Classic: Red Light Green Light only</div>
-        <div>Enhanced: Both games + level switching</div>
+        <div>Enhanced: Red Light Green Light + Tug of War V2</div>
       </div>
     </div>
   );

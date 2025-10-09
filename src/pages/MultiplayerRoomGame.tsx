@@ -11,7 +11,7 @@ import { Doll } from '../game/components/Doll';
 import { Soldier } from '../game/components/Soldier';
 import { Celebration } from '../game/components/Celebration';
 import { NameTag } from '../game/components/NameTag';
-import { MultiplayerTugOfWar } from '../game/MultiplayerTugOfWar';
+// Removed MultiplayerTugOfWar import - now using V2 version
 import { MODEL_CONFIG } from '../game/config/models';
 import { FIELD_CONFIG } from '../game/config/field';
 
@@ -857,57 +857,26 @@ export default function MultiplayerRoomGame() {
     </div>
   );
 
-  // Render Tug of War game
-  const renderTugOfWar = () => (
-    <div className="w-full h-screen relative">
-      <div className="absolute top-3 left-3 z-10 flex gap-3">
-        <button 
-          className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600" 
-          onClick={handleLeave}
-        >
-          Leave Game
-        </button>
-        <Link to="/" className="px-3 py-1 rounded bg-white/80">Single Player</Link>
-        
-        {/* Mute Button */}
-        <button 
-          className={`px-3 py-1 rounded text-white hover:opacity-80 transition-opacity ${
-            isMuted ? 'bg-red-600' : 'bg-green-600'
-          }`}
-          onClick={toggleMute}
-          title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
-        >
-          {isMuted ? '🔇' : '🔊'}
-        </button>
-        
-        <span className="px-3 py-1 rounded bg-white/60 text-sm">
-          Players: {players.length} • Host: {isHost ? 'Yes' : 'No'}
-        </span>
+  // Render Tug of War game - redirect to V2
+  const renderTugOfWar = () => {
+    // Redirect to the V2 version with current room code and player info
+    const urlParams = new URLSearchParams(window.location.search);
+    const name = urlParams.get('name') || 'Player';
+    const id = urlParams.get('id') || crypto.randomUUID();
+    const isCreator = urlParams.get('creator') === 'true';
+    
+    // Navigate to V2 version
+    window.location.href = `/towv2/${code}?name=${encodeURIComponent(name)}&id=${encodeURIComponent(id)}${isCreator ? '&creator=true' : ''}`;
+    
+    return (
+      <div className="w-full h-screen relative flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Redirecting to Tug of War V2...</h2>
+          <p className="text-gray-600">Please wait while we redirect you to the enhanced version.</p>
+        </div>
       </div>
-
-      {/* Game Type Selector */}
-      <div className="absolute top-3 right-3 z-10 flex gap-2">
-        <button
-          className={`px-3 py-1 rounded text-white ${
-            gameType === 'red-light-green-light' ? 'bg-blue-600' : 'bg-gray-600'
-          }`}
-          onClick={() => handleGameTypeChange('red-light-green-light')}
-        >
-          🚦 Red Light Green Light
-        </button>
-        <button
-          className={`px-3 py-1 rounded text-white ${
-            gameType === 'tug-of-war' ? 'bg-orange-600' : 'bg-gray-600'
-          }`}
-          onClick={() => handleGameTypeChange('tug-of-war')}
-        >
-          🪢 Tug of War
-        </button>
-      </div>
-
-      <MultiplayerTugOfWar />
-    </div>
-  );
+    );
+  };
 
   if (status !== 'Connected') {
     return (

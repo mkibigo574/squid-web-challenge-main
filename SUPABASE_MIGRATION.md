@@ -200,3 +200,57 @@ Once migration is complete, you'll have:
 - Zero downtime migration
 
 The game will work exactly as before, but with the added benefits of cloud storage!
+
+---
+
+## Tug of War V2 Realtime Schema (Rooms/Players/Game States)
+
+```sql
+-- Rooms table
+create table if not exists public.rooms (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  status text not null default 'lobby', -- lobby | positioning | pulling | results
+  team_red_players uuid[] not null default '{}',
+  team_blue_players uuid[] not null default '{}',
+  round_number int not null default 1,
+  winner text null
+);
+
+-- Players table
+create table if not exists public.players (
+  id uuid primary key default gen_random_uuid(),
+  username text not null,
+  current_room uuid references public.rooms(id) on delete set null,
+  team text check (team in ('red','blue')),
+  position int,
+  pull_power float8 not null default 0,
+  connected boolean not null default true,
+  last_seen timestamptz not null default now()
+);
+
+-- Game states table
+create table if not exists public.game_states (
+  id uuid primary key default gen_random_uuid(),
+  room_id uuid not null references public.rooms(id) on delete cascade,
+  rope_position float8 not null default 0, -- -1..+1
+  game_phase text not null default 'lobby',
+  last_updated timestamptz not null default now()
+);
+
+-- Enable realtime
+alter publication supabase_realtime add table public.rooms;
+alter publication supabase_realtime add table public.players;
+alter publication supabase_realtime add table public.game_states;
+```
+
+RLS basics (adjust for your auth strategy):
+```sql
+alter table public.rooms enable row level security;
+alter table public.players enable row level security;
+alter table public.game_states enable row level security;
+
+create policy "read all" on public.rooms for select using (true);
+create policy "read all" on public.players for select using (true);
+create policy "read all" on public.game_states for select using (true);
+```

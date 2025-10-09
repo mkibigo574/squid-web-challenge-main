@@ -30,93 +30,83 @@ export const TugOfWarEnvironment = () => {
         <meshStandardMaterial color="#111018" />
       </mesh>
 
-      {/* Central purple stage with gold trim */}
-      <group position={[0, 0, 0]}>
-        {/* Purple deck */}
+      {/* Central brown stage with gold trim (widened to fit extended teams) */}
+      <group position={[0, -6, 0]}>
+        {/* Brown deck */}
         <mesh position={[0, 0, 0]} receiveShadow castShadow>
-          <boxGeometry args={[18, 0.8, 12]} />
-          <meshStandardMaterial color="#5b3aa5" metalness={0.2} roughness={0.4} />
+          <boxGeometry args={[48, 0.8, 12]} />
+          <meshStandardMaterial color="#8B4513" metalness={0.2} roughness={0.4} />
         </mesh>
         {/* Gold border */}
         <mesh position={[0, -0.45, 0]} castShadow>
-          <boxGeometry args={[19.2, 0.2, 13.2]} />
+          <boxGeometry args={[49.2, 0.2, 13.2]} />
           <meshStandardMaterial color="#d4a017" metalness={0.8} roughness={0.2} />
         </mesh>
       </group>
 
-      {/* Side platforms - elevated left/right pads with simple scaffold accents */}
-      <group>
-        <mesh position={[-16, 1.2, 0]} castShadow receiveShadow>
-          <boxGeometry args={[10, 1.2, 6]} />
-          <meshStandardMaterial color="#2e2a3f" />
+      {/* Side platforms - elevated left/right pads with simple scaffold accents (span to platform ends) */}
+      <group position={[0, 8, 0]}>
+        <mesh position={[-13.5, 1.2, 0]} castShadow receiveShadow>
+          <boxGeometry args={[20, 1.2, 6]} />
+          <meshStandardMaterial color="#5b3aa5" />
         </mesh>
-        <mesh position={[16, 1.2, 0]} castShadow receiveShadow>
-          <boxGeometry args={[10, 1.2, 6]} />
-          <meshStandardMaterial color="#2e2a3f" />
+        <mesh position={[13.5, 1.2, 0]} castShadow receiveShadow>
+          <boxGeometry args={[20, 1.2, 6]} />
+          <meshStandardMaterial color="#5b3aa5" />
         </mesh>
-        {[-16, 16].map((x) => (
+        {[-13.5, 13.5].map((x) => (
           <group key={x} position={[x, 0, 0]}>
             <mesh position={[0, -1.2, 2.8]}>
-              <boxGeometry args={[10, 0.2, 0.2]} />
+              <boxGeometry args={[20, 0.2, 0.2]} />
               <meshStandardMaterial color="#6f5a24" />
             </mesh>
             <mesh position={[0, -1.2, -2.8]}>
-              <boxGeometry args={[10, 0.2, 0.2]} />
+              <boxGeometry args={[20, 0.2, 0.2]} />
               <meshStandardMaterial color="#6f5a24" />
             </mesh>
-            <mesh position={[4.8, -3, 0]}>
-              <boxGeometry args={[0.2, 4, 0.2]} />
-              <meshStandardMaterial color="#6f5a24" />
+            <mesh position={[9.8, -8.2, 0]}>
+              <boxGeometry args={[0.2, 14, 0.2]} />
+              <meshStandardMaterial color="#8B4513" />
             </mesh>
-            <mesh position={[-4.8, -3, 0]}>
-              <boxGeometry args={[0.2, 4, 0.2]} />
-              <meshStandardMaterial color="#6f5a24" />
+            <mesh position={[-9.8, -8.2, 0]}>
+              <boxGeometry args={[0.2, 14, 0.2]} />
+              <meshStandardMaterial color="#8B4513" />
             </mesh>
           </group>
         ))}
       </group>
 
-      {/* Rope anchors near stage edges */}
-      <mesh position={[-9.5, 1.4, 0]}>
+      {/* Rope anchors near widened stage edges */}
+      <mesh position={[-22, 9.4, 0]}>
         <cylinderGeometry args={[0.18, 0.18, 0.6]} />
         <meshStandardMaterial color="#404040" />
       </mesh>
-      <mesh position={[9.5, 1.4, 0]}>
+      <mesh position={[22, 9.4, 0]}>
         <cylinderGeometry args={[0.18, 0.18, 0.6]} />
         <meshStandardMaterial color="#404040" />
       </mesh>
 
-      {/* Hanging red triangle midpoint marker */}
-      <group ref={markerGroupRef} position={[0, 3, 0]}>
-        {/* Cable */}
-        <mesh position={[0, 0.6, 0]}>
-          <cylinderGeometry args={[0.02, 0.02, 1.2]} />
-          <meshStandardMaterial color="#cccccc" />
-        </mesh>
-        {/* Red cone (triangular marker stylization) */}
-        <mesh ref={pulseRef} position={[0, 0, 0]} castShadow>
-          <coneGeometry args={[0.9, 1.2, 3]} />
-          <meshStandardMaterial color="#e0192d" emissive="#780a14" metalness={0.4} roughness={0.35} />
-        </mesh>
-      </group>
+      {/* Central rope anchor - positioned above the rope */}
+      <mesh position={[0, 10.0, 0]}>
+        <cylinderGeometry args={[0.18, 0.18, 0.6]} />
+        <meshStandardMaterial color="#404040" />
+      </mesh>
+
+      {/* Removed midpoint guillotine/marker for cleaner stage */}
 
       {/* Background gradient panels and central light streak */}
       <group position={[0, 0, -8]}>
         <mesh rotation={[0, 0, 0]}>
-          <planeGeometry args={[70, 40]} />
-          <meshStandardMaterial color="#1a1230" />
-        </mesh>
-        <mesh position={[0, 0, 0.01]}>
-          <planeGeometry args={[2, 40]} />
-          <meshStandardMaterial color="#3d2b7b" emissive="#3d2b7b" emissiveIntensity={0.4} />
+          <planeGeometry args={[120, 60]} />
+          <meshStandardMaterial color="#0f0a2e" />
         </mesh>
       </group>
 
       {/* Stylized arena lighting matching reference */}
-      <ambientLight intensity={0.35} />
-      <spotLight position={[-20, 18, 10]} angle={0.6} intensity={1.2} color="#6a40d8" penumbra={0.6} castShadow />
-      <spotLight position={[20, 18, -10]} angle={0.6} intensity={1.0} color="#ff8c3a" penumbra={0.6} castShadow />
-      <directionalLight position={[0, 15, 5]} intensity={0.6} castShadow />
+      <ambientLight intensity={0.3} />
+      <spotLight position={[-28, 22, 12]} angle={0.55} intensity={1.4} color="#6a40d8" penumbra={0.7} castShadow />
+      <spotLight position={[28, 22, -12]} angle={0.55} intensity={1.2} color="#ff8c3a" penumbra={0.7} castShadow />
+      <directionalLight position={[0, 18, 6]} intensity={0.7} castShadow />
     </group>
   );
 };

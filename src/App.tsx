@@ -10,6 +10,7 @@ import Room from "./pages/Room";
 import RoomGame from "./pages/RoomGame";
 import MultiplayerRoomGame from "./pages/MultiplayerRoomGame";
 import { GameManager } from "./game/GameManager";
+import TowV2 from "./pages/TowV2";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/room/:code/multiplayer" element={<MultiplayerRoomGame />} />
           <Route path="/game" element={<GameManager />} />
           <Route path="/game/:level" element={<GameManager />} />
+          <Route path="/towv2" element={<TowV2 />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
