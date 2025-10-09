@@ -62,6 +62,17 @@ export function useTowV2() {
           team = idx % 2 === 0 ? 'red' : 'blue';
         }
         
+        // Debug: Log team assignment for first few players
+        if (idx < 3) {
+          console.log(`Player ${idx} team assignment:`, {
+            id: p.id,
+            presenceTeam: p.team,
+            position: p.position,
+            assignedTeam: team,
+            fallbackUsed: !p.team && typeof p.position !== 'number'
+          });
+        }
+        
         return {
           id: p.id,
           name: p.name,
@@ -204,7 +215,8 @@ export function useTowV2() {
     setPhase('lobby');
     setWinner(null);
     setRope(0);
-    setSelectedTeam(null);
+    // Don't reset selectedTeam - preserve team assignments across resets
+    // setSelectedTeam(null);
     broadcastState({ v2: true, phase: 'lobby', rope: 0, winner: null });
   }, [host, broadcastState]);
 
