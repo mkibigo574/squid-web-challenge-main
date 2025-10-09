@@ -102,7 +102,7 @@ export const TugOfWarEnvironment = () => {
       <group ref={chainsawRef} position={[0, -3, 0]}>
         <mesh rotation={[0, 0, Math.PI / 2]}>
           <cylinderGeometry args={[0.3, 0.3, 12]} />
-          <meshStandardMaterial color="#1a1a1a" metalness={0.9} roughness={0.1} />
+          <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
         </mesh>
         {/* Chain links around the cylinder */}
         {Array.from({ length: 16 }, (_, i) => {
@@ -112,7 +112,7 @@ export const TugOfWarEnvironment = () => {
           return (
             <mesh key={i} position={[x, 0, z]} rotation={[0, angle, 0]}>
               <boxGeometry args={[0.12, 0.2, 0.08]} />
-              <meshStandardMaterial color="#333333" metalness={0.9} roughness={0.1} />
+              <meshStandardMaterial color="#cc0000" metalness={0.9} roughness={0.1} />
             </mesh>
           );
         })}
@@ -124,7 +124,7 @@ export const TugOfWarEnvironment = () => {
           return (
             <mesh key={`tooth-${i}`} position={[x, 0, z]} rotation={[0, angle, 0]}>
               <coneGeometry args={[0.04, 0.15, 4]} />
-              <meshStandardMaterial color="#ff4444" metalness={0.9} roughness={0.1} />
+              <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
             </mesh>
           );
         })}
