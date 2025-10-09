@@ -99,7 +99,7 @@ export const TugOfWarEnvironment = () => {
       </mesh>
 
       {/* Rotating chainsaw chain in the center gap */}
-      <group ref={chainsawRef} position={[0, -3, 0]}>
+      <group ref={chainsawRef} position={[0, -5, 0]}>
         <mesh rotation={[0, 0, Math.PI / 2]}>
           <cylinderGeometry args={[0.3, 0.3, 12]} />
           <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
@@ -147,7 +147,7 @@ export const TugOfWarEnvironment = () => {
       <directionalLight position={[0, 18, 6]} intensity={0.7} castShadow />
       
       {/* Chainsaw lighting */}
-      <pointLight position={[0, -3, 0]} intensity={1.2} color="#ff4444" distance={8} />
+      <pointLight position={[0, -5, 0]} intensity={1.2} color="#ff4444" distance={8} />
     </group>
   );
 };
