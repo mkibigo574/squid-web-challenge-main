@@ -33,6 +33,15 @@ function Rope({ value, phase = 'pulling' }: { value: number; phase?: string }) {
       ropeY += FLOATING_OFFSET;
     }
     group.current.position.set(0, ropeY, 0);
+    
+    // Debug: Log rope positioning
+    console.log('Rope positioning:', {
+      ropeY,
+      phase,
+      PLAYER_BASE_Y,
+      HAND_LOCAL_Y,
+      FLOATING_OFFSET
+    });
   });
 
   const spacing = 0.35;
@@ -101,8 +110,19 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       
       // Position players so their hands align with the rope
       // The rope is at PLAYER_BASE_Y + HAND_LOCAL_Y, so players need to be at PLAYER_BASE_Y
-      // to have their hands at the rope level
+      // to have their hands at the rope level (hands are at HAND_LOCAL_Y relative to player group)
       currentYRef.current = baseY + Math.max(0, bob);
+      
+      // Debug: Log player positioning
+      if (side === 'left' && playerIndex === 0) {
+        console.log('Player positioning:', {
+          baseY,
+          currentY: currentYRef.current,
+          ropeY: PLAYER_BASE_Y + HAND_LOCAL_Y,
+          phase,
+          detached
+        });
+      }
       vyRef.current = 0;
       hasDetachedRef.current = false;
       isDisappearingRef.current = false; // Reset disappearing state
@@ -114,6 +134,23 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
         group.current.rotation.z = lean;
         group.current.visible = true; // Make sure player is visible
         group.current.scale.setScalar(1); // Reset scale
+        
+        // Reset material properties that might have been changed during disappearing
+        group.current.traverse((child) => {
+          if (child instanceof THREE.Mesh && child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach(mat => {
+                if (mat instanceof THREE.MeshStandardMaterial) {
+                  mat.transparent = false;
+                  mat.opacity = 1;
+                }
+              });
+            } else if (child.material instanceof THREE.MeshStandardMaterial) {
+              child.material.transparent = false;
+              child.material.opacity = 1;
+            }
+          }
+        });
       }
       if (bubblesRef.current) {
         bubblesRef.current.clear(); // Clear any existing bubbles
