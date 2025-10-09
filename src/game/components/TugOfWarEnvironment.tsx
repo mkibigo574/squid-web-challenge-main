@@ -99,32 +99,32 @@ export const TugOfWarEnvironment = () => {
       </mesh>
 
       {/* Rotating chainsaw chain in the center gap */}
-      <group ref={chainsawRef} position={[0, -5.8, 0]}>
+      <group ref={chainsawRef} position={[0, -3, 0]}>
         <mesh rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.15, 0.15, 8]} />
-          <meshStandardMaterial color="#2a2a2a" metalness={0.8} roughness={0.2} />
+          <cylinderGeometry args={[0.3, 0.3, 12]} />
+          <meshStandardMaterial color="#1a1a1a" metalness={0.9} roughness={0.1} />
         </mesh>
         {/* Chain links around the cylinder */}
-        {Array.from({ length: 12 }, (_, i) => {
-          const angle = (i / 12) * Math.PI * 2;
-          const x = Math.cos(angle) * 0.25;
-          const z = Math.sin(angle) * 0.25;
+        {Array.from({ length: 16 }, (_, i) => {
+          const angle = (i / 16) * Math.PI * 2;
+          const x = Math.cos(angle) * 0.4;
+          const z = Math.sin(angle) * 0.4;
           return (
             <mesh key={i} position={[x, 0, z]} rotation={[0, angle, 0]}>
-              <boxGeometry args={[0.08, 0.12, 0.04]} />
-              <meshStandardMaterial color="#444444" metalness={0.9} roughness={0.1} />
+              <boxGeometry args={[0.12, 0.2, 0.08]} />
+              <meshStandardMaterial color="#333333" metalness={0.9} roughness={0.1} />
             </mesh>
           );
         })}
         {/* Sharp teeth */}
-        {Array.from({ length: 24 }, (_, i) => {
-          const angle = (i / 24) * Math.PI * 2;
-          const x = Math.cos(angle) * 0.3;
-          const z = Math.sin(angle) * 0.3;
+        {Array.from({ length: 32 }, (_, i) => {
+          const angle = (i / 32) * Math.PI * 2;
+          const x = Math.cos(angle) * 0.5;
+          const z = Math.sin(angle) * 0.5;
           return (
             <mesh key={`tooth-${i}`} position={[x, 0, z]} rotation={[0, angle, 0]}>
-              <coneGeometry args={[0.02, 0.08, 4]} />
-              <meshStandardMaterial color="#666666" metalness={0.9} roughness={0.1} />
+              <coneGeometry args={[0.04, 0.15, 4]} />
+              <meshStandardMaterial color="#ff4444" metalness={0.9} roughness={0.1} />
             </mesh>
           );
         })}
@@ -147,7 +147,7 @@ export const TugOfWarEnvironment = () => {
       <directionalLight position={[0, 18, 6]} intensity={0.7} castShadow />
       
       {/* Chainsaw lighting */}
-      <pointLight position={[0, -5.8, 0]} intensity={0.8} color="#ff4444" distance={6} />
+      <pointLight position={[0, -3, 0]} intensity={1.2} color="#ff4444" distance={8} />
     </group>
   );
 };
