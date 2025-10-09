@@ -315,7 +315,7 @@ function TeamPlayers({ rope, redEffort, blueEffort, detachedRed, detachedBlue, p
 }
 
 export const MultiplayerTugOfWarV2 = () => {
-  const { phase, rope, start, setSelfPulling, countdown, chooseTeam, reset, winner, players } = useTowV2() as any;
+  const { phase, rope, start, setSelfPulling, countdown, chooseTeam, reset, winner, players, allPlayersHaveTeams } = useTowV2() as any;
   const [power, setPower] = useState(0);
   const [detachedRed, setDetachedRed] = useState(false);
   const [detachedBlue, setDetachedBlue] = useState(false);
@@ -393,12 +393,29 @@ export const MultiplayerTugOfWarV2 = () => {
       </Canvas>
 
       <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/90 text-sm bg-black/60 px-3 py-1 rounded">
-        Phase: {phase} {phase === 'positioning' ? `(starts in ${countdown})` : phase === 'floating' ? `(floating in ${countdown})` : phase === 'falling' ? '(players falling...)' : ''}
+        {phase === 'lobby' && (
+          allPlayersHaveTeams ? 
+            'All players ready! Game starting...' : 
+            `Waiting for team selection... (${players.length} players)`
+        )}
+        {phase === 'floating' && (
+          countdown > 3 ? `Get Ready! (${countdown - 3})` :
+          countdown === 3 ? '3' :
+          countdown === 2 ? '2' :
+          countdown === 1 ? '1' :
+          countdown === 0 ? 'Play!' :
+          `Floating... (${countdown})`
+        )}
+        {phase === 'pulling' && 'Tug of War!'}
+        {phase === 'falling' && 'Players falling...'}
+        {phase === 'results' && `Winner: ${winner === 'blue' ? 'Green' : winner === 'red' ? 'Red' : '—'}`}
       </div>
       <div className="absolute top-4 left-4 flex gap-2">
-        <button className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded" onClick={start}>Start</button>
+        {phase === 'lobby' && !allPlayersHaveTeams && (
+          <button className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded" onClick={start}>Force Start</button>
+        )}
         <button className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded" onClick={reset}>Reset</button>
-        {phase === 'positioning' && (
+        {phase === 'lobby' && (
           <>
             <button className="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1 rounded" onClick={() => chooseTeam('red')}>Join Red</button>
             <button className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded" onClick={() => chooseTeam('blue')}>Join Green</button>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { multiplayerManager } from '@/lib/multiplayer';
 
 export type V2Phase = 'lobby' | 'positioning' | 'floating' | 'pulling' | 'falling' | 'results';
@@ -111,20 +111,15 @@ export function useTowV2() {
 
   const start = useCallback(() => {
     if (!host) return;
-    setPhase('positioning');
-    setCountdown(3);
+    setPhase('floating');
+    setCountdown(5); // 5 second countdown: 3, 2, 1, Get Ready, Play
     setWinner(null);
     setRope(0);
-    multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'positioning', countdown: 3, rope: 0, winner: null });
+    multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'floating', countdown: 5, rope: 0, winner: null });
     setTimeout(() => {
-      setPhase('floating');
-      setCountdown(3);
-      multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'floating', countdown: 3, rope: 0 });
-      setTimeout(() => {
-        setPhase('pulling');
-        multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'pulling', rope: 0 });
-      }, 3000);
-    }, 3000);
+      setPhase('pulling');
+      multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'pulling', rope: 0 });
+    }, 5000);
   }, [host]);
 
   const setSelfPulling = useCallback((isPulling: boolean, power: number) => {
@@ -139,6 +134,26 @@ export function useTowV2() {
     const position = team === 'red' ? -6 : 6;
     multiplayerManager.updatePresence({ position });
   }, []);
+
+  // Check if all players have selected teams
+  const allPlayersHaveTeams = useMemo(() => {
+    return players.length > 0 && players.every(p => p.position !== undefined && p.position !== null);
+  }, [players]);
+
+  // Auto-start floating when all players have selected teams
+  useEffect(() => {
+    if (host && phase === 'lobby' && allPlayersHaveTeams && players.length >= 2) {
+      setPhase('floating');
+      setCountdown(5);
+      setWinner(null);
+      setRope(0);
+      multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'floating', countdown: 5, rope: 0, winner: null });
+      setTimeout(() => {
+        setPhase('pulling');
+        multiplayerManager.broadcast('game_state_changed', { v2: true, phase: 'pulling', rope: 0 });
+      }, 5000);
+    }
+  }, [host, phase, allPlayersHaveTeams, players.length]);
 
   const reset = useCallback(() => {
     if (!host) return;
@@ -159,6 +174,7 @@ export function useTowV2() {
     chooseTeam,
     reset,
     winner,
+    allPlayersHaveTeams,
   };
 }
 
