@@ -370,24 +370,64 @@ function TeamPlayers({ rope, redEffort, blueEffort, detachedRed, detachedBlue, p
 }
 
 export const MultiplayerTugOfWarV2 = () => {
-  const { phase, rope, start, setSelfPulling, countdown, chooseTeam, startGame, reset, winner, players, selectedTeam } = useTowV2() as any;
+  const { 
+    phase, rope, start, setSelfPulling, countdown, chooseTeam, startGame, reset, winner, players, selectedTeam,
+    // Tournament props
+    tournamentMode, redTeamPlayers, blueTeamPlayers, currentRound, roundResults, 
+    selectedRedPlayers, selectedBluePlayers, tournamentWinner,
+    initializeTournament, selectRoundPlayers, startRound, endRound, resetTournament
+  } = useTowV2() as any;
   const [power, setPower] = useState(0);
   const [detachedRed, setDetachedRed] = useState(false);
   const [detachedBlue, setDetachedBlue] = useState(false);
+  const [showWinModal, setShowWinModal] = useState(false);
+  const [showEliminationModal, setShowEliminationModal] = useState(false);
+  const [roundCountdown, setRoundCountdown] = useState(3);
 
   useEffect(() => {
-    const onDown = () => setPower(p => Math.min(1, p + 0.25));
-    window.addEventListener('keydown', onDown);
-    window.addEventListener('mousedown', onDown);
-    return () => { window.removeEventListener('keydown', onDown); window.removeEventListener('mousedown', onDown); };
+    let lastInputTime = 0;
+    const inputCooldown = 100; // 100ms cooldown between inputs
+    
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Only respond to 'W' key or 'Up arrow' key
+      if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
+        const now = Date.now();
+        if (now - lastInputTime >= inputCooldown) {
+          lastInputTime = now;
+          setPower(p => Math.min(1, p + 0.25));
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', onKeyDown);
+    return () => { 
+      window.removeEventListener('keydown', onKeyDown); 
+    };
   }, []);
 
   useEffect(() => {
     const id = setInterval(() => {
-      setPower(p => Math.max(0, p - 0.08));
+      setPower(p => Math.max(0, p - 0.12)); // Increased decay rate since no holding allowed
     }, 100);
     return () => clearInterval(id);
   }, []);
+
+  // Countdown effect for tournament rounds
+  useEffect(() => {
+    if (phase === 'floating' && tournamentMode) {
+      setRoundCountdown(3);
+      const countdownInterval = setInterval(() => {
+        setRoundCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(countdownInterval);
+    }
+  }, [phase, tournamentMode]);
 
   useEffect(() => {
     const pulling = phase === 'pulling' && power > 0.01;
@@ -396,23 +436,64 @@ export const MultiplayerTugOfWarV2 = () => {
 
   // Trigger detachment based on rope position thresholds (same as win conditions)
   useEffect(() => {
+    console.log('Detachment effect:', { phase, rope, detachedRed, detachedBlue, selectedTeam });
+    
     if (phase === 'pulling' || phase === 'falling') {
       // Red team detaches when rope reaches +0.95 or higher (blue is winning)
       if (!detachedRed && rope >= 0.95) {
+        console.log('Red team eliminated, selectedTeam:', selectedTeam);
         setDetachedRed(true);
+        // Show elimination modal only if current player is on red team
+        if (selectedTeam === 'red') {
+          console.log('Showing elimination modal for red team');
+          setTimeout(() => {
+            setShowEliminationModal(true);
+          }, 100);
+        }
       }
       // Blue team detaches when rope reaches -0.95 or lower (red is winning)
       if (!detachedBlue && rope <= -0.95) {
+        console.log('Blue team eliminated, selectedTeam:', selectedTeam);
         setDetachedBlue(true);
+        // Show elimination modal only if current player is on blue team
+        if (selectedTeam === 'blue') {
+          console.log('Showing elimination modal for blue team');
+          setTimeout(() => {
+            setShowEliminationModal(true);
+          }, 100);
+        }
       }
     } else if (phase === 'lobby' || phase === 'floating') {
-      // Only reset detachment when explicitly resetting the game
+      // Reset detachment when explicitly resetting the game
       setDetachedRed(false);
       setDetachedBlue(false);
+      setShowWinModal(false);
+      setShowEliminationModal(false);
     }
-    // Don't reset detachment during 'results' phase - let players stay fallen
-  }, [phase, rope, detachedRed, detachedBlue]);
+    // Don't reset modals during 'results' phase - let them stay visible
+  }, [phase, rope, detachedRed, detachedBlue, selectedTeam]);
 
+  // Show win modal when results phase starts - only for the winning team
+  useEffect(() => {
+    console.log('Win modal effect:', { phase, winner, selectedTeam, showWinModal });
+    if (phase === 'results' && winner) {
+      console.log('Results phase with winner:', winner, 'selectedTeam:', selectedTeam);
+      if (selectedTeam === winner) {
+        console.log('Showing win modal for winning team');
+        // Add a small delay to ensure the modal shows properly
+        setTimeout(() => {
+          setShowWinModal(true);
+        }, 100);
+      } else {
+        console.log('Not showing win modal - different team');
+      }
+    }
+  }, [phase, winner, selectedTeam]);
+
+  // Debug modal states
+  useEffect(() => {
+    console.log('Modal states:', { showWinModal, showEliminationModal, phase, winner, selectedTeam });
+  }, [showWinModal, showEliminationModal, phase, winner, selectedTeam]);
 
   return (
     <div className="w-full h-screen relative bg-yellow-400">
@@ -454,15 +535,21 @@ export const MultiplayerTugOfWarV2 = () => {
 
       <div className="absolute top-4 left-1/2 -translate-x-1/2 text-black/90 text-sm bg-white/90 px-3 py-1 rounded border border-gray-400 shadow-lg">
         {phase === 'lobby' && 'Waiting for players...'}
-        {phase === 'floating' && 'Players floating above platforms - Get ready!'}
-        {phase === 'positioning' && 'Choose your team!'}
+        {phase === 'floating' && (tournamentMode ? `Round ${currentRound} - Players landing in ${roundCountdown} seconds...` : 'Players floating above platforms - Get ready!')}
+        {phase === 'positioning' && (tournamentMode ? 'Choose your team for the tournament!' : 'Choose your team!')}
         {phase === 'pulling' && 'Tug of War!'}
         {phase === 'falling' && 'Players falling...'}
-        {phase === 'results' && `Winner: ${winner === 'blue' ? 'Green' : winner === 'red' ? 'Red' : '—'}`}
+        {phase === 'results' && 'Game Over!'}
+        {phase === 'tournament' && `Tournament Mode - Round ${currentRound}`}
+        {phase === 'round-selection' && `Round ${currentRound} - Players Selected!`}
+        {phase === 'round-results' && `Round ${currentRound} Complete!`}
+        {phase === 'tournament-winner' && 'Tournament Complete!'}
       </div>
       <div className="absolute top-4 left-4 flex gap-2">
         {phase === 'floating' && (
-          <button className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded" onClick={start}>Choose your Team</button>
+          <button className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded" onClick={start}>
+            {tournamentMode ? 'Start Tournament' : 'Choose your Team'}
+          </button>
         )}
         {phase === 'positioning' && (
           <>
@@ -486,28 +573,208 @@ export const MultiplayerTugOfWarV2 = () => {
             >
               {selectedTeam === 'blue' ? '✓ Green Team' : 'Join Green'}
             </button>
-            <button 
-              className={`px-3 py-1 rounded text-white font-semibold transition-all duration-200 ${
-                selectedTeam 
-                  ? 'bg-blue-600 hover:bg-blue-700 hover:scale-105' 
-                  : 'bg-gray-500 cursor-not-allowed opacity-50'
-              }`}
-              onClick={startGame}
-              disabled={!selectedTeam}
-            >
-              Start Tug of War
-            </button>
           </>
         )}
         <button className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded" onClick={reset}>Reset</button>
-      </div>
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-black/90 text-sm bg-white/90 px-3 py-2 rounded border border-gray-400 shadow-lg">
-        {phase !== 'results' ? (
-          <>Power: {(power*100).toFixed(0)}% — click or press any key rapidly to pull</>
-        ) : (
-          <>Winner: {winner === 'blue' ? 'Green' : winner === 'red' ? 'Red' : '—'}</>
+        {phase === 'lobby' && (
+          <button className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded" onClick={initializeTournament}>Start Tournament</button>
+        )}
+        {phase === 'tournament' && (
+          <button className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded" onClick={selectRoundPlayers}>Select Round Players</button>
+        )}
+        {tournamentMode && (
+          <button className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded" onClick={resetTournament}>End Tournament</button>
         )}
       </div>
+      
+          {/* Start Round button - centered when team is selected in tournament mode */}
+          {phase === 'positioning' && selectedTeam && tournamentMode && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ transform: 'translate(-50%, calc(-50% - 25rem))' }}>
+              <button 
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xl px-8 py-4 rounded-lg shadow-2xl transform hover:scale-110 transition-all duration-300 border-2 border-blue-400"
+                onClick={startGame}
+              >
+                Start Round
+              </button>
+            </div>
+          )}
+      
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-black/90 text-sm bg-white/90 px-3 py-2 rounded border border-gray-400 shadow-lg">
+        {phase !== 'results' && (
+          <>Power: {Math.round((phase === 'pulling' ? power : 0)*100)}% — press W or ↑ rapidly to pull (keyboard only!)</>
+        )}
+      </div>
+
+      {/* Tournament Info Panel */}
+      {tournamentMode && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-white/90 rounded-lg p-4 border border-gray-400 shadow-lg max-w-sm">
+          <h3 className="font-bold text-lg mb-2">Tournament Progress</h3>
+          <div className="text-sm space-y-1">
+            <div>Round: {currentRound}</div>
+            <div className="flex justify-between gap-8">
+              <span className="text-red-600">Red Team: {redTeamPlayers.filter(p => !p.isEliminated).length}/9</span>
+              <span className="text-green-600">Green Team: {blueTeamPlayers.filter(p => !p.isEliminated).length}/9</span>
+            </div>
+            {selectedRedPlayers.length > 0 && (
+              <div className="mt-2">
+                <div className="text-red-600 font-semibold">Round {currentRound} Players:</div>
+                <div className="text-xs">
+                  Red: {selectedRedPlayers.map(p => p.playerNumber).join(', ')}
+                </div>
+                <div className="text-xs">
+                  Green: {selectedBluePlayers.map(p => p.playerNumber).join(', ')}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Red Team Roster - Left Side */}
+      {tournamentMode && redTeamPlayers.length > 0 && (
+        <div className="absolute top-16 left-4 bg-red-50/90 rounded-lg p-3 border-2 border-red-300 shadow-lg max-w-xs">
+          <h4 className="font-bold text-red-700 mb-2 text-center">Red Team ({redTeamPlayers.filter(p => !p.isEliminated).length}/9)</h4>
+          <div className="grid grid-cols-3 gap-1 text-xs">
+            {redTeamPlayers.map((player) => (
+              <div
+                key={player.id}
+                className={`p-1 rounded text-center ${
+                  player.isEliminated 
+                    ? 'bg-red-200 text-red-500 line-through' 
+                    : selectedRedPlayers.some(p => p.id === player.id)
+                    ? 'bg-red-600 text-white font-bold'
+                    : 'bg-red-100 text-red-700'
+                }`}
+              >
+                P{player.playerNumber}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Blue Team Roster - Right Side */}
+      {tournamentMode && blueTeamPlayers.length > 0 && (
+        <div className="absolute top-16 right-4 bg-green-50/90 rounded-lg p-3 border-2 border-green-300 shadow-lg max-w-xs">
+          <h4 className="font-bold text-green-700 mb-2 text-center">Green Team ({blueTeamPlayers.filter(p => !p.isEliminated).length}/9)</h4>
+          <div className="grid grid-cols-3 gap-1 text-xs">
+            {blueTeamPlayers.map((player) => (
+              <div
+                key={player.id}
+                className={`p-1 rounded text-center ${
+                  player.isEliminated 
+                    ? 'bg-green-200 text-green-500 line-through' 
+                    : selectedBluePlayers.some(p => p.id === player.id)
+                    ? 'bg-green-600 text-white font-bold'
+                    : 'bg-green-100 text-green-700'
+                }`}
+              >
+                P{player.playerNumber}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Round Results Panel */}
+      {phase === 'round-results' && roundResults.length > 0 && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white/95 rounded-lg p-6 border border-gray-400 shadow-2xl max-w-md">
+          <h3 className="font-bold text-xl mb-4 text-center">Round {roundResults[roundResults.length - 1].roundNumber} Results</h3>
+          <div className="text-center">
+            <div className="text-2xl mb-2">
+              {roundResults[roundResults.length - 1].winner === 'red' ? '🔴' : '🔵'} 
+              {roundResults[roundResults.length - 1].winner === 'red' ? 'Red Team' : 'Blue Team'} Wins!
+            </div>
+            <div className="text-sm text-gray-600 mb-4">
+              Eliminated: {roundResults[roundResults.length - 1].eliminatedPlayers.map(p => `${p.team === 'red' ? 'Red' : 'Blue'} P${p.playerNumber}`).join(', ')}
+            </div>
+            <div className="text-xs text-gray-500">Next round starting in 3 seconds...</div>
+          </div>
+        </div>
+      )}
+
+      {/* Tournament Winner Modal */}
+      {phase === 'tournament-winner' && tournamentWinner && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl">
+            <div className="text-6xl mb-4">🏆</div>
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">
+              {tournamentWinner === 'red' ? 'Red Team' : 'Blue Team'} Wins Tournament!
+            </h2>
+            <p className="text-gray-600 mb-6">Congratulations on your tournament victory!</p>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => {
+                  resetTournament();
+                }}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
+              >
+                🏆 New Tournament
+              </button>
+              <button
+                onClick={() => {
+                  resetTournament();
+                }}
+                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
+              >
+                🏠 Back to Lobby
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Win Modal */}
+      {showWinModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl">
+            <div className="animate-bounce">
+              <div className="text-6xl mb-4">🎉</div>
+              <h2 className="text-3xl font-bold text-gray-800 mb-2">
+                {selectedTeam === 'blue' ? 'Green Team' : 'Red Team'} Wins!
+              </h2>
+              <p className="text-gray-600 mb-6">Congratulations on your victory!</p>
+            </div>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => {
+                  setShowWinModal(false);
+                  reset();
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
+              >
+                🎮 Play Again
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Elimination Modal */}
+      {showEliminationModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl">
+            <div className="animate-pulse">
+              <div className="text-6xl mb-4">💀</div>
+              <h2 className="text-3xl font-bold text-red-800 mb-2">
+                {selectedTeam === 'blue' ? 'Green Team' : 'Red Team'} Eliminated!
+              </h2>
+              <p className="text-red-600 mb-6">Better luck next time!</p>
+            </div>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => {
+                  setShowEliminationModal(false);
+                  reset();
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
+              >
+                🔄 Try Again
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

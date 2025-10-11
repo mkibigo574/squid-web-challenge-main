@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { multiplayerManager } from '@/lib/multiplayer';
 
-export type V2Phase = 'lobby' | 'floating' | 'positioning' | 'pulling' | 'falling' | 'results';
+export type V2Phase = 'lobby' | 'floating' | 'positioning' | 'pulling' | 'falling' | 'results' | 'tournament' | 'round-selection' | 'round-results' | 'tournament-winner';
 
 export type V2Player = {
   id: string;
@@ -10,6 +10,24 @@ export type V2Player = {
   position: number; // index along rope (-8..8 world units semantics)
   pullPower: number; // 0..1
   isPulling: boolean;
+  isEliminated?: boolean;
+  playerNumber?: number; // 1-9 for tournament tracking
+};
+
+export type TournamentPlayer = {
+  id: string;
+  name: string;
+  playerNumber: number;
+  team: 'red' | 'blue';
+  isEliminated: boolean;
+};
+
+export type RoundResult = {
+  roundNumber: number;
+  redPlayers: TournamentPlayer[];
+  bluePlayers: TournamentPlayer[];
+  winner: 'red' | 'blue';
+  eliminatedPlayers: TournamentPlayer[];
 };
 
 export function useTowV2() {
@@ -20,6 +38,16 @@ export function useTowV2() {
   const [host, setHost] = useState(false);
   const [winner, setWinner] = useState<null | 'red' | 'blue'>(null);
   const [selectedTeam, setSelectedTeam] = useState<null | 'red' | 'blue'>(null);
+  
+  // Tournament state - start in tournament mode by default
+  const [tournamentMode, setTournamentMode] = useState(true);
+  const [redTeamPlayers, setRedTeamPlayers] = useState<TournamentPlayer[]>([]);
+  const [blueTeamPlayers, setBlueTeamPlayers] = useState<TournamentPlayer[]>([]);
+  const [currentRound, setCurrentRound] = useState(1);
+  const [roundResults, setRoundResults] = useState<RoundResult[]>([]);
+  const [selectedRedPlayers, setSelectedRedPlayers] = useState<TournamentPlayer[]>([]);
+  const [selectedBluePlayers, setSelectedBluePlayers] = useState<TournamentPlayer[]>([]);
+  const [tournamentWinner, setTournamentWinner] = useState<null | 'red' | 'blue'>(null);
 
   const selfIdRef = useRef<string>(multiplayerManager.getSelfId() || crypto.randomUUID());
   const lastUpdateRef = useRef<number>(0);
@@ -77,6 +105,47 @@ export function useTowV2() {
       if (mapped.length > 0 && phaseRef.current === 'lobby') {
         setPhase('floating');
         setSelectedTeam(null); // Reset selected team when transitioning to floating
+        
+        // Auto-initialize tournament if in tournament mode
+        if (tournamentMode && redTeamPlayers.length === 0) {
+          // Create 9 players for each team
+          const redPlayers: TournamentPlayer[] = Array.from({ length: 9 }, (_, i) => ({
+            id: `red-${i + 1}`,
+            name: `Red Player ${i + 1}`,
+            playerNumber: i + 1,
+            team: 'red',
+            isEliminated: false,
+          }));
+          
+          const bluePlayers: TournamentPlayer[] = Array.from({ length: 9 }, (_, i) => ({
+            id: `blue-${i + 1}`,
+            name: `Blue Player ${i + 1}`,
+            playerNumber: i + 1,
+            team: 'blue',
+            isEliminated: false,
+          }));
+          
+          setRedTeamPlayers(redPlayers);
+          setBlueTeamPlayers(bluePlayers);
+          setCurrentRound(1);
+          setRoundResults([]);
+          setSelectedRedPlayers([]);
+          setSelectedBluePlayers([]);
+          setTournamentWinner(null);
+          
+          // Broadcast tournament initialization
+          if (hostRef.current) {
+            broadcastState({ 
+              v2: true, 
+              phase: 'floating',
+              tournamentMode: true,
+              redTeamPlayers: redPlayers,
+              blueTeamPlayers: bluePlayers,
+              currentRound: 1
+            });
+          }
+        }
+        
         if (hostRef.current) {
           broadcastState({ v2: true, phase: 'floating' });
         }
@@ -100,6 +169,16 @@ export function useTowV2() {
         setRope(payload.rope);
       }
       if (payload.winner) setWinner(payload.winner);
+      
+      // Tournament state synchronization
+      if (payload.tournamentMode !== undefined) setTournamentMode(payload.tournamentMode);
+      if (payload.redTeamPlayers) setRedTeamPlayers(payload.redTeamPlayers);
+      if (payload.blueTeamPlayers) setBlueTeamPlayers(payload.blueTeamPlayers);
+      if (payload.currentRound) setCurrentRound(payload.currentRound);
+      if (payload.roundResults) setRoundResults(payload.roundResults);
+      if (payload.selectedRedPlayers) setSelectedRedPlayers(payload.selectedRedPlayers);
+      if (payload.selectedBluePlayers) setSelectedBluePlayers(payload.selectedBluePlayers);
+      if (payload.tournamentWinner) setTournamentWinner(payload.tournamentWinner);
     };
 
     multiplayerManager.onEvent('PLAYERS_UPDATED', onPlayers);
@@ -114,7 +193,118 @@ export function useTowV2() {
       multiplayerManager.offEvent('GAME_STATE_CHANGED', onState);
       multiplayerManager.offEvent('ROPE_POSITION_CHANGED', onRope as any);
     };
-  }, []);
+  }, [tournamentMode, redTeamPlayers.length]);
+
+  // Tournament functions - defined early to avoid circular dependency
+  const selectRoundPlayers = useCallback(() => {
+    if (!host) return;
+    
+    // Get available (non-eliminated) players
+    const availableRed = redTeamPlayers.filter(p => !p.isEliminated);
+    const availableBlue = blueTeamPlayers.filter(p => !p.isEliminated);
+    
+    console.log('Selecting round players:', { 
+      totalRed: redTeamPlayers.length, 
+      availableRed: availableRed.length,
+      totalBlue: blueTeamPlayers.length, 
+      availableBlue: availableBlue.length,
+      redEliminated: redTeamPlayers.filter(p => p.isEliminated).length,
+      blueEliminated: blueTeamPlayers.filter(p => p.isEliminated).length
+    });
+    
+    // Check if tournament is over
+    if (availableRed.length === 0) {
+      console.log('Red team eliminated - Blue team wins!');
+      setTournamentWinner('blue');
+      setPhase('tournament-winner');
+      broadcastState({ v2: true, phase: 'tournament-winner', tournamentWinner: 'blue' });
+      return;
+    }
+    if (availableBlue.length === 0) {
+      console.log('Blue team eliminated - Red team wins!');
+      setTournamentWinner('red');
+      setPhase('tournament-winner');
+      broadcastState({ v2: true, phase: 'tournament-winner', tournamentWinner: 'red' });
+      return;
+    }
+    
+    // Select 3 random players from each team (or all remaining if less than 3)
+    const selectRandomPlayers = (players: TournamentPlayer[], count: number) => {
+      const shuffled = [...players].sort(() => 0.5 - Math.random());
+      return shuffled.slice(0, Math.min(count, players.length));
+    };
+    
+    const selectedRed = selectRandomPlayers(availableRed, 3);
+    const selectedBlue = selectRandomPlayers(availableBlue, 3);
+    
+    setSelectedRedPlayers(selectedRed);
+    setSelectedBluePlayers(selectedBlue);
+    
+    // Go directly to pulling phase for tournament rounds
+    setPhase('pulling');
+    setRope(0);
+    
+    broadcastState({ 
+      v2: true, 
+      phase: 'pulling',
+      rope: 0,
+      selectedRedPlayers: selectedRed,
+      selectedBluePlayers: selectedBlue,
+      currentRound
+    });
+  }, [host, redTeamPlayers, blueTeamPlayers, currentRound, broadcastState]);
+
+  const endRound = useCallback((roundWinner: 'red' | 'blue') => {
+    if (!host) return;
+    
+    const eliminatedPlayers = roundWinner === 'red' ? selectedBluePlayers : selectedRedPlayers;
+    console.log('Ending round:', { roundWinner, eliminatedPlayers });
+    
+    // Mark players as eliminated
+    const updatedRedPlayers = redTeamPlayers.map(p => 
+      eliminatedPlayers.some(ep => ep.id === p.id) ? { ...p, isEliminated: true } : p
+    );
+    const updatedBluePlayers = blueTeamPlayers.map(p => 
+      eliminatedPlayers.some(ep => ep.id === p.id) ? { ...p, isEliminated: true } : p
+    );
+    
+    console.log('Updated players:', { updatedRedPlayers, updatedBluePlayers });
+    setRedTeamPlayers(updatedRedPlayers);
+    setBlueTeamPlayers(updatedBluePlayers);
+    
+    // Create round result
+    const roundResult: RoundResult = {
+      roundNumber: currentRound,
+      redPlayers: selectedRedPlayers,
+      bluePlayers: selectedBluePlayers,
+      winner: roundWinner,
+      eliminatedPlayers: eliminatedPlayers,
+    };
+    
+    setRoundResults(prev => [...prev, roundResult]);
+    setPhase('round-results');
+    
+    broadcastState({ 
+      v2: true, 
+      phase: 'round-results',
+      roundResult,
+      redTeamPlayers: updatedRedPlayers,
+      blueTeamPlayers: updatedBluePlayers
+    });
+    
+    // Auto-advance to next round after 3 seconds with countdown
+    setTimeout(() => {
+      setCurrentRound(prev => prev + 1);
+      // Start countdown phase for next round
+      setPhase('floating');
+      broadcastState({ v2: true, phase: 'floating', currentRound: currentRound + 1 });
+      
+      // After 3 seconds, select next round players and start
+      setTimeout(() => {
+        selectRoundPlayers();
+      }, 3000);
+    }, 3000);
+  }, [host, selectedRedPlayers, selectedBluePlayers, redTeamPlayers, blueTeamPlayers, currentRound, selectRoundPlayers, broadcastState]);
 
   // Reset rope to center when game resets
   useEffect(() => {
@@ -145,11 +335,20 @@ export function useTowV2() {
         setPhase('falling'); // new phase for falling animation
         setWinner('blue');
         broadcastState({ v2: true, phase: 'falling', rope: next, winner: 'blue' });
-        // Delay before showing results to allow falling animation
-        setTimeout(() => {
-          setPhase('results');
-          broadcastState({ v2: true, phase: 'results', rope: next, winner: 'blue' });
-        }, 3000); // 3 seconds for falling animation
+        
+        // Handle tournament vs single game
+        if (tournamentMode) {
+          // In tournament mode, end the round after falling animation
+          setTimeout(() => {
+            endRound('blue');
+          }, 3000);
+        } else {
+          // In single game mode, show results
+          setTimeout(() => {
+            setPhase('results');
+            broadcastState({ v2: true, phase: 'results', rope: next, winner: 'blue' });
+          }, 3000);
+        }
         return;
       }
       if (next <= -0.95) {
@@ -158,30 +357,48 @@ export function useTowV2() {
         setPhase('falling'); // new phase for falling animation
         setWinner('red');
         broadcastState({ v2: true, phase: 'falling', rope: next, winner: 'red' });
-        // Delay before showing results to allow falling animation
-        setTimeout(() => {
-          setPhase('results');
-          broadcastState({ v2: true, phase: 'results', rope: next, winner: 'red' });
-        }, 3000); // 3 seconds for falling animation
+        
+        // Handle tournament vs single game
+        if (tournamentMode) {
+          // In tournament mode, end the round after falling animation
+          setTimeout(() => {
+            endRound('red');
+          }, 3000);
+        } else {
+          // In single game mode, show results
+          setTimeout(() => {
+            setPhase('results');
+            broadcastState({ v2: true, phase: 'results', rope: next, winner: 'red' });
+          }, 3000);
+        }
         return;
       }
       setRope(next);
       broadcastState({ v2: true, phase: 'pulling', rope: next });
     }, 100);
     return () => clearInterval(id);
-  }, [host, phase, players, rope, broadcastState]);
+  }, [host, phase, players, rope, broadcastState, tournamentMode, endRound]);
 
   const start = useCallback(() => {
     if (!host) return;
     if (phase === 'floating') {
-      // Transition from floating to positioning (still floating)
-      setPhase('positioning');
-      setCountdown(0);
-      setWinner(null);
-      setRope(0);
-      broadcastState({ v2: true, phase: 'positioning', countdown: 0, rope: 0, winner: null });
+      if (tournamentMode) {
+        // In tournament mode, go to team selection first
+        setPhase('positioning');
+        setCountdown(0);
+        setWinner(null);
+        setRope(0);
+        broadcastState({ v2: true, phase: 'positioning', countdown: 0, rope: 0, winner: null });
+      } else {
+        // In single game mode, go to positioning
+        setPhase('positioning');
+        setCountdown(0);
+        setWinner(null);
+        setRope(0);
+        broadcastState({ v2: true, phase: 'positioning', countdown: 0, rope: 0, winner: null });
+      }
     }
-  }, [host, phase, broadcastState]);
+  }, [host, phase, broadcastState, tournamentMode]);
 
   const setSelfPulling = useCallback((isPulling: boolean, power: number) => {
     multiplayerManager.updatePresence({
@@ -204,10 +421,60 @@ export function useTowV2() {
   const startGame = useCallback(() => {
     if (!host) return;
     if (phase === 'positioning') {
-      setPhase('pulling');
-      broadcastState({ v2: true, phase: 'pulling', rope: 0 });
+      if (tournamentMode) {
+        // In tournament mode, select round players and start the game immediately
+        const availableRed = redTeamPlayers.filter(p => !p.isEliminated);
+        const availableBlue = blueTeamPlayers.filter(p => !p.isEliminated);
+        
+        // Check if tournament is over
+        if (availableRed.length === 0) {
+          setTournamentWinner('blue');
+          setPhase('tournament-winner');
+          broadcastState({ v2: true, phase: 'tournament-winner', tournamentWinner: 'blue' });
+          return;
+        }
+        if (availableBlue.length === 0) {
+          setTournamentWinner('red');
+          setPhase('tournament-winner');
+          broadcastState({ v2: true, phase: 'tournament-winner', tournamentWinner: 'red' });
+          return;
+        }
+        
+        // Select exactly 3 players from each team (must have at least 3 available)
+        if (availableRed.length < 3 || availableBlue.length < 3) {
+          console.log('Not enough players for a round:', { availableRed: availableRed.length, availableBlue: availableBlue.length });
+          return;
+        }
+        
+        const selectRandomPlayers = (players: TournamentPlayer[], count: number) => {
+          const shuffled = [...players].sort(() => 0.5 - Math.random());
+          return shuffled.slice(0, count);
+        };
+        
+        const selectedRed = selectRandomPlayers(availableRed, 3);
+        const selectedBlue = selectRandomPlayers(availableBlue, 3);
+        
+        setSelectedRedPlayers(selectedRed);
+        setSelectedBluePlayers(selectedBlue);
+        
+        // Start the game immediately
+        setPhase('pulling');
+        setRope(0);
+        broadcastState({ 
+          v2: true, 
+          phase: 'pulling', 
+          rope: 0,
+          selectedRedPlayers: selectedRed,
+          selectedBluePlayers: selectedBlue,
+          currentRound
+        });
+      } else {
+        // In single game mode, go directly to pulling
+        setPhase('pulling');
+        broadcastState({ v2: true, phase: 'pulling', rope: 0 });
+      }
     }
-  }, [host, phase, broadcastState]);
+  }, [host, phase, broadcastState, tournamentMode, redTeamPlayers, blueTeamPlayers, currentRound]);
 
   const reset = useCallback(() => {
     if (!host) return;
@@ -219,6 +486,68 @@ export function useTowV2() {
     console.log('Reset called - rope after setRope(0):', 0);
     broadcastState({ v2: true, phase: 'lobby', rope: 0, winner: null });
   }, [host, broadcastState, rope]);
+
+  // Tournament functions
+  const initializeTournament = useCallback(() => {
+    if (!host) return;
+    
+    // Create 9 players for each team
+    const redPlayers: TournamentPlayer[] = Array.from({ length: 9 }, (_, i) => ({
+      id: `red-${i + 1}`,
+      name: `Red Player ${i + 1}`,
+      playerNumber: i + 1,
+      team: 'red',
+      isEliminated: false,
+    }));
+    
+    const bluePlayers: TournamentPlayer[] = Array.from({ length: 9 }, (_, i) => ({
+      id: `blue-${i + 1}`,
+      name: `Blue Player ${i + 1}`,
+      playerNumber: i + 1,
+      team: 'blue',
+      isEliminated: false,
+    }));
+    
+    setRedTeamPlayers(redPlayers);
+    setBlueTeamPlayers(bluePlayers);
+    setCurrentRound(1);
+    setRoundResults([]);
+    setSelectedRedPlayers([]);
+    setSelectedBluePlayers([]);
+    setTournamentWinner(null);
+    setTournamentMode(true);
+    setPhase('tournament');
+    
+    broadcastState({ 
+      v2: true, 
+      phase: 'tournament', 
+      tournamentMode: true,
+      redTeamPlayers: redPlayers,
+      blueTeamPlayers: bluePlayers,
+      currentRound: 1
+    });
+  }, [host, broadcastState]);
+
+  const startRound = useCallback(() => {
+    if (!host) return;
+    setPhase('pulling');
+    setRope(0);
+    broadcastState({ v2: true, phase: 'pulling', rope: 0 });
+  }, [host, broadcastState]);
+
+  const resetTournament = useCallback(() => {
+    if (!host) return;
+    setTournamentMode(false);
+    setRedTeamPlayers([]);
+    setBlueTeamPlayers([]);
+    setCurrentRound(1);
+    setRoundResults([]);
+    setSelectedRedPlayers([]);
+    setSelectedBluePlayers([]);
+    setTournamentWinner(null);
+    setPhase('lobby');
+    broadcastState({ v2: true, phase: 'lobby', tournamentMode: false });
+  }, [host, broadcastState]);
 
   return {
     phase,
@@ -233,6 +562,20 @@ export function useTowV2() {
     reset,
     winner,
     selectedTeam,
+    // Tournament exports
+    tournamentMode,
+    redTeamPlayers,
+    blueTeamPlayers,
+    currentRound,
+    roundResults,
+    selectedRedPlayers,
+    selectedBluePlayers,
+    tournamentWinner,
+    initializeTournament,
+    selectRoundPlayers,
+    startRound,
+    endRound,
+    resetTournament,
   };
 }
 

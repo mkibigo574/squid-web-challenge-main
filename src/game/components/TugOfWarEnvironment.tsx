@@ -123,7 +123,7 @@ export const TugOfWarEnvironment = () => {
                 return (
                   <mesh key={`blade-link-${j}`} position={[x, 0, z]} rotation={[0, linkAngle, 0]}>
                     <boxGeometry args={[0.12, 0.2, 0.08]} />
-                    <meshStandardMaterial color="#cc0000" metalness={0.9} roughness={0.1} />
+                    <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
                   </mesh>
                 );
               })}
@@ -147,7 +147,7 @@ export const TugOfWarEnvironment = () => {
                 return (
                   <mesh key={`blade-edge-${j}`} position={[x, 0, z]} rotation={[0, edgeAngle, 0]}>
                     <boxGeometry args={[0.02, 0.3, 0.02]} />
-                    <meshStandardMaterial color="#cc0000" metalness={0.9} roughness={0.1} />
+                    <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
                   </mesh>
                 );
               })}
