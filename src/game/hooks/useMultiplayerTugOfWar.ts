@@ -146,14 +146,14 @@ export const useMultiplayerTugOfWar = () => {
       const CENTER_PIT_THRESHOLD = 1.0; // Distance from center to consider "in the pit"
       
       const redTeamPlayers = players.filter(player => !player.isEliminated && player.position < 0);
-      const greenTeamPlayers = players.filter(player => !player.isEliminated && player.position >= 0);
+      const blueTeamPlayers = players.filter(player => !player.isEliminated && player.position >= 0);
       
       console.log('🎯 Checking win condition:', {
         gameState,
         redTeamCount: redTeamPlayers.length,
-        greenTeamCount: greenTeamPlayers.length,
+        blueTeamCount: blueTeamPlayers.length,
         redTeamPositions: redTeamPlayers.map(p => ({ id: p.id, position: p.position, absPos: Math.abs(p.position) })),
-        greenTeamPositions: greenTeamPlayers.map(p => ({ id: p.id, position: p.position, absPos: Math.abs(p.position) })),
+        blueTeamPositions: blueTeamPlayers.map(p => ({ id: p.id, position: p.position, absPos: Math.abs(p.position) })),
         centerPitThreshold: CENTER_PIT_THRESHOLD
       });
       
@@ -161,19 +161,19 @@ export const useMultiplayerTugOfWar = () => {
       
       // Check if red team has been pulled into the center pit
       if (redTeamPlayers.length > 0 && redTeamPlayers.every(player => Math.abs(player.position) <= CENTER_PIT_THRESHOLD)) {
-        // Green team wins - they pulled red team into the pit
-        winningPlayers = greenTeamPlayers.map(p => p.id);
-        console.log('🎯 Green team wins - Red team pulled into center pit!', { 
+        // Blue team wins - they pulled red team into the pit
+        winningPlayers = blueTeamPlayers.map(p => p.id);
+        console.log('🎯 Blue team wins - Red team pulled into center pit!', { 
           redTeamPositions: redTeamPlayers.map(p => p.position),
-          greenTeamWinners: winningPlayers
+          blueTeamWinners: winningPlayers
         });
       }
-      // Check if green team has been pulled into the center pit
-      else if (greenTeamPlayers.length > 0 && greenTeamPlayers.every(player => Math.abs(player.position) <= CENTER_PIT_THRESHOLD)) {
-        // Red team wins - they pulled green team into the pit
+      // Check if blue team has been pulled into the center pit
+      else if (blueTeamPlayers.length > 0 && blueTeamPlayers.every(player => Math.abs(player.position) <= CENTER_PIT_THRESHOLD)) {
+        // Red team wins - they pulled blue team into the pit
         winningPlayers = redTeamPlayers.map(p => p.id);
-        console.log('🎯 Red team wins - Green team pulled into center pit!', { 
-          greenTeamPositions: greenTeamPlayers.map(p => p.position),
+        console.log('🎯 Red team wins - Blue team pulled into center pit!', { 
+          blueTeamPositions: blueTeamPlayers.map(p => p.position),
           redTeamWinners: winningPlayers
         });
       }
@@ -419,11 +419,11 @@ export const useMultiplayerTugOfWar = () => {
     // Re-evaluate immediate pit victory at timeout (authoritative safeguard)
     const CENTER_PIT_THRESHOLD = 1.0;
     const redTeamPlayers = players.filter(player => !player.isEliminated && player.position < 0);
-    const greenTeamPlayers = players.filter(player => !player.isEliminated && player.position >= 0);
+    const blueTeamPlayers = players.filter(player => !player.isEliminated && player.position >= 0);
     
     if (redTeamPlayers.length > 0 && redTeamPlayers.every(player => Math.abs(player.position) <= CENTER_PIT_THRESHOLD)) {
-      const winningPlayers = greenTeamPlayers.map(p => p.id);
-      console.log('🏁 Timeout pit check: Green team wins - Red team in pit');
+      const winningPlayers = blueTeamPlayers.map(p => p.id);
+      console.log('🏁 Timeout pit check: Blue team wins - Red team in pit');
       setWinners(winningPlayers);
       setEnded(true);
       setGameState('won');
@@ -435,9 +435,9 @@ export const useMultiplayerTugOfWar = () => {
       });
       return;
     }
-    if (greenTeamPlayers.length > 0 && greenTeamPlayers.every(player => Math.abs(player.position) <= CENTER_PIT_THRESHOLD)) {
+    if (blueTeamPlayers.length > 0 && blueTeamPlayers.every(player => Math.abs(player.position) <= CENTER_PIT_THRESHOLD)) {
       const winningPlayers = redTeamPlayers.map(p => p.id);
-      console.log('🏁 Timeout pit check: Red team wins - Green team in pit');
+      console.log('🏁 Timeout pit check: Red team wins - Blue team in pit');
       setWinners(winningPlayers);
       setEnded(true);
       setGameState('won');
@@ -469,8 +469,8 @@ export const useMultiplayerTugOfWar = () => {
       });
       return;
     } else if (effectiveRopePosition === 'right') {
-      const winningPlayers = greenTeamPlayers.map(p => p.id);
-      console.log('🏁 Timeout rope status (computed): right → Green team wins');
+      const winningPlayers = blueTeamPlayers.map(p => p.id);
+      console.log('🏁 Timeout rope status (computed): right → Blue team wins');
       setWinners(winningPlayers);
       setEnded(true);
       setGameState('won');
@@ -489,27 +489,27 @@ export const useMultiplayerTugOfWar = () => {
       // If no recorded leading side, derive from current pull effort
       if (!leadingSide) {
         const redPull = redTeamPlayers.reduce((sum, p) => sum + (p.isPulling ? p.pullStrength : 0), 0);
-        const greenPull = greenTeamPlayers.reduce((sum, p) => sum + (p.isPulling ? p.pullStrength : 0), 0);
-        if (redPull > greenPull) leadingSide = 'red';
-        else if (greenPull > redPull) leadingSide = 'green';
+        const bluePull = blueTeamPlayers.reduce((sum, p) => sum + (p.isPulling ? p.pullStrength : 0), 0);
+        if (redPull > bluePull) leadingSide = 'red';
+        else if (bluePull > redPull) leadingSide = 'blue';
       }
 
       // If still no leader (no one pulling), use average team positions (closest to center wins)
       if (!leadingSide) {
         const leftAvgPos = redTeamPlayers.length > 0 ? redTeamPlayers.reduce((s, p) => s + p.position, 0) / redTeamPlayers.length : -Infinity;
-        const rightAvgPos = greenTeamPlayers.length > 0 ? greenTeamPlayers.reduce((s, p) => s + p.position, 0) / greenTeamPlayers.length : Infinity;
-        // If the center point skews left, favor red; if right, favor green
+        const rightAvgPos = blueTeamPlayers.length > 0 ? blueTeamPlayers.reduce((s, p) => s + p.position, 0) / blueTeamPlayers.length : Infinity;
+        // If the center point skews left, favor red; if right, favor blue
         const centerPoint = (leftAvgPos + rightAvgPos) / 2;
         if (centerPoint < 0) leadingSide = 'red';
-        else if (centerPoint > 0) leadingSide = 'green';
+        else if (centerPoint > 0) leadingSide = 'blue';
       }
 
       if (leadingSide === 'red') {
         winningPlayers = redTeamPlayers.map(p => p.id);
         console.log('🏁 Timeout rope status: center, derived tiebreaker → Red team wins');
-      } else if (leadingSide === 'green') {
-        winningPlayers = greenTeamPlayers.map(p => p.id);
-        console.log('🏁 Timeout rope status: center, derived tiebreaker → Green team wins');
+      } else if (leadingSide === 'blue') {
+        winningPlayers = blueTeamPlayers.map(p => p.id);
+        console.log('🏁 Timeout rope status: center, derived tiebreaker → Blue team wins');
       } else {
         console.log('🏁 Timeout rope status: center and could not derive leader → Tie, no winners');
       }
@@ -532,21 +532,21 @@ export const useMultiplayerTugOfWar = () => {
     console.log('🏁 Team analysis:', {
       ropePosition,
       redTeamCount: redTeamPlayers.length,
-      greenTeamCount: greenTeamPlayers.length,
+      blueTeamCount: blueTeamPlayers.length,
       redTeamPositions: redTeamPlayers.map(p => p.position),
-      greenTeamPositions: greenTeamPlayers.map(p => p.position)
+      blueTeamPositions: blueTeamPlayers.map(p => p.position)
     });
     
-    if (redTeamPlayers.length > 0 && greenTeamPlayers.length > 0) {
+    if (redTeamPlayers.length > 0 && blueTeamPlayers.length > 0) {
       // Determine winner based on rope position
       if (ropePosition === 'left') {
         // Red team has pulled the rope to their side - they win
         winningPlayers = redTeamPlayers.map(p => p.id);
         console.log('🏁 Red team wins - rope pulled to left side');
       } else if (ropePosition === 'right') {
-        // Green team has pulled the rope to their side - they win
-        winningPlayers = greenTeamPlayers.map(p => p.id);
-        console.log('🏁 Green team wins - rope pulled to right side');
+        // Blue team has pulled the rope to their side - they win
+        winningPlayers = blueTeamPlayers.map(p => p.id);
+        console.log('🏁 Blue team wins - rope pulled to right side');
       } else {
         // Rope is centered → tie
         winningPlayers = [];
@@ -556,10 +556,10 @@ export const useMultiplayerTugOfWar = () => {
       // Only red team has players - they win by default
       winningPlayers = redTeamPlayers.map(p => p.id);
       console.log('🏁 Red team wins - only team with players');
-    } else if (greenTeamPlayers.length > 0) {
-      // Only green team has players - they win by default
-      winningPlayers = greenTeamPlayers.map(p => p.id);
-      console.log('🏁 Green team wins - only team with players');
+    } else if (blueTeamPlayers.length > 0) {
+      // Only blue team has players - they win by default
+      winningPlayers = blueTeamPlayers.map(p => p.id);
+      console.log('🏁 Blue team wins - only team with players');
     } else {
       // No players - no winners
       winningPlayers = [];

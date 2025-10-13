@@ -21,10 +21,10 @@ export const TugOfWarEnvironment = () => {
       markerGroupRef.current.rotation.z = Math.sin(t * 1.2) * 0.08;
       markerGroupRef.current.position.y = 3 + Math.sin(t * 2.0) * 0.06;
     }
-    // Rotate the chainsaw chain
+    // Rotate the chainsaw chain - fast and dangerous
     if (chainsawRef.current) {
       const t = state.clock.elapsedTime;
-      chainsawRef.current.rotation.y = t * 15; // Very fast, dangerous rotation
+      chainsawRef.current.rotation.y = t * 20; // Fast, dangerous rotation
     }
   });
 
@@ -79,65 +79,27 @@ export const TugOfWarEnvironment = () => {
               <meshStandardMaterial color="#8B4513" />
         </mesh>
             
-            {/* Complete brick wall with 15 unit height */}
-            {Array.from({ length: 28 }, (_, layer) => {
-              // Height from brown surface (Y = -16) to Y = -1
-              // Total height = 15 units, divided into 28 layers = 0.54 units per layer
-              // Start exactly at brown surface level
-              const layerHeight = -16 + (layer * 0.54);
+            {/* Optimized brick wall - simplified for performance */}
+            {Array.from({ length: 15 }, (_, layer) => {
+              // Reduced layers for better performance
+              const layerHeight = -16 + (layer * 1.0); // 15 layers with 1.0 unit spacing
               const isOffsetLayer = layer % 2 === 1; // Offset every other layer
               
-              return Array.from({ length: 25 }, (_, i) => {
-                const brickX = -9.8 + (i * 0.8); // 25 bricks with 0.8 unit spacing
+              return Array.from({ length: 20 }, (_, i) => {
+                const brickX = -9.8 + (i * 1.0); // 20 bricks with 1.0 unit spacing
                 const brickY = layerHeight;
                 const brickZ = 0;
-                const finalX = isOffsetLayer ? brickX + 0.4 : brickX; // Half-brick offset
+                const finalX = isOffsetLayer ? brickX + 0.5 : brickX; // Half-brick offset
                 
                 // Only place brick if it's within the pole gap
                 if (finalX >= -9.8 && finalX <= 9.8) {
                   return (
                     <mesh key={`brick-${layer}-${i}`} position={[finalX, brickY, brickZ]} castShadow receiveShadow>
-                      <boxGeometry args={[0.7, 0.3, 0.2]} />
+                      <boxGeometry args={[0.8, 0.8, 0.2]} />
                       <meshStandardMaterial 
                         color={
-                          (layer + i) % 6 === 0 ? "#8B4513" : 
-                          (layer + i) % 6 === 1 ? "#A0522D" : 
-                          (layer + i) % 6 === 2 ? "#CD853F" : 
-                          (layer + i) % 6 === 3 ? "#D2691E" : 
-                          (layer + i) % 6 === 4 ? "#B8860B" : "#DEB887"
-                        }
-                        metalness={0.1}
-                        roughness={0.8}
-                      />
-                    </mesh>
-                  );
-                }
-                return null;
-              }).filter(Boolean);
-            }).flat()}
-            
-            {/* Additional dense brick layers for complete coverage */}
-            {Array.from({ length: 37 }, (_, layer) => {
-              // Dense layers with different spacing, starting from brown surface
-              const layerHeight = -16 + (layer * 0.4); // 37 layers with 0.4 unit spacing
-              const isOffsetLayer = layer % 2 === 0; // Opposite offset pattern
-              
-              return Array.from({ length: 30 }, (_, i) => {
-                const brickX = -9.8 + (i * 0.65); // 30 bricks with 0.65 unit spacing
-                const brickY = layerHeight;
-                const brickZ = 0;
-                const finalX = isOffsetLayer ? brickX + 0.325 : brickX; // Quarter-brick offset
-                
-                // Only place brick if it's within the pole gap
-                if (finalX >= -9.8 && finalX <= 9.8) {
-                  return (
-                    <mesh key={`dense-${layer}-${i}`} position={[finalX, brickY, brickZ]} castShadow receiveShadow>
-                      <boxGeometry args={[0.6, 0.3, 0.2]} />
-                      <meshStandardMaterial 
-                        color={
-                          (layer + i) % 4 === 0 ? "#8B4513" : 
-                          (layer + i) % 4 === 1 ? "#A0522D" : 
-                          (layer + i) % 4 === 2 ? "#CD853F" : "#D2691E"
+                          (layer + i) % 3 === 0 ? "#8B4513" : 
+                          (layer + i) % 3 === 1 ? "#A0522D" : "#CD853F"
                         }
                         metalness={0.1}
                         roughness={0.8}
@@ -168,26 +130,27 @@ export const TugOfWarEnvironment = () => {
         <meshStandardMaterial color="#404040" />
       </mesh>
 
-      {/* Rotating chainsaw chain in the center gap */}
+      {/* Optimized rotating chainsaw chain in the center gap */}
       <group ref={chainsawRef} position={[0, -5, 0]}>
+        {/* Main cylinder - simplified */}
         <mesh rotation={[0, 0, Math.PI / 2]}>
           <cylinderGeometry args={[0.3, 0.3, 7]} />
           <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
         </mesh>
         
-        {/* Helicopter-style blades - identical to chainsaw */}
-        {Array.from({ length: 4 }, (_, i) => {
-          const angle = (i / 4) * Math.PI * 2;
+        {/* Ultra-simplified blade structure for maximum performance */}
+        {Array.from({ length: 2 }, (_, i) => {
+          const angle = (i / 2) * Math.PI * 2;
           return (
             <group key={`blade-${i}`} rotation={[0, angle, 0]}>
-              {/* Main blade - same as chainsaw cylinder */}
+              {/* Main blade cylinder */}
               <mesh position={[0, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
                 <cylinderGeometry args={[0.3, 0.3, 7]} />
                 <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
               </mesh>
-              {/* Chain links around the blade - same as original */}
-              {Array.from({ length: 16 }, (_, j) => {
-                const linkAngle = (j / 16) * Math.PI * 2;
+              {/* Minimal chain links for performance */}
+              {Array.from({ length: 4 }, (_, j) => {
+                const linkAngle = (j / 4) * Math.PI * 2;
                 const x = Math.cos(linkAngle) * 0.4;
                 const z = Math.sin(linkAngle) * 0.4;
                 return (
@@ -197,9 +160,9 @@ export const TugOfWarEnvironment = () => {
                   </mesh>
                 );
               })}
-              {/* Sharp teeth - more aggressive and dangerous */}
-              {Array.from({ length: 48 }, (_, j) => {
-                const toothAngle = (j / 48) * Math.PI * 2;
+              {/* Minimal teeth for performance */}
+              {Array.from({ length: 6 }, (_, j) => {
+                const toothAngle = (j / 6) * Math.PI * 2;
                 const x = Math.cos(toothAngle) * 0.5;
                 const z = Math.sin(toothAngle) * 0.5;
                 return (
@@ -209,37 +172,13 @@ export const TugOfWarEnvironment = () => {
                   </mesh>
                 );
               })}
-              {/* Additional razor-sharp edges */}
-              {Array.from({ length: 24 }, (_, j) => {
-                const edgeAngle = (j / 24) * Math.PI * 2;
-                const x = Math.cos(edgeAngle) * 0.45;
-                const z = Math.sin(edgeAngle) * 0.45;
-                return (
-                  <mesh key={`blade-edge-${j}`} position={[x, 0, z]} rotation={[0, edgeAngle, 0]}>
-                    <boxGeometry args={[0.02, 0.3, 0.02]} />
-                    <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
-                  </mesh>
-                );
-              })}
-              {/* Spinning blade tips - extra sharp points */}
-              {Array.from({ length: 8 }, (_, j) => {
-                const tipAngle = (j / 8) * Math.PI * 2;
-                const x = Math.cos(tipAngle) * 0.6;
-                const z = Math.sin(tipAngle) * 0.6;
-                return (
-                  <mesh key={`blade-tip-${j}`} position={[x, 0, z]} rotation={[0, tipAngle, 0]}>
-                    <octahedronGeometry args={[0.08]} />
-                    <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
-                  </mesh>
-                );
-              })}
             </group>
           );
         })}
         
-        {/* Chain links around the cylinder */}
-        {Array.from({ length: 16 }, (_, i) => {
-          const angle = (i / 16) * Math.PI * 2;
+        {/* Minimal central chain links */}
+        {Array.from({ length: 4 }, (_, i) => {
+          const angle = (i / 4) * Math.PI * 2;
           const x = Math.cos(angle) * 0.4;
           const z = Math.sin(angle) * 0.4;
           return (
@@ -249,38 +188,14 @@ export const TugOfWarEnvironment = () => {
             </mesh>
           );
         })}
-        {/* Sharp teeth - more aggressive and dangerous */}
-        {Array.from({ length: 48 }, (_, i) => {
-          const angle = (i / 48) * Math.PI * 2;
+        {/* Minimal teeth for performance */}
+        {Array.from({ length: 6 }, (_, i) => {
+          const angle = (i / 6) * Math.PI * 2;
           const x = Math.cos(angle) * 0.5;
           const z = Math.sin(angle) * 0.5;
           return (
             <mesh key={`tooth-${i}`} position={[x, 0, z]} rotation={[0, angle, 0]}>
               <coneGeometry args={[0.06, 0.25, 4]} />
-              <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
-            </mesh>
-          );
-        })}
-        {/* Additional razor-sharp edges */}
-        {Array.from({ length: 24 }, (_, i) => {
-          const edgeAngle = (i / 24) * Math.PI * 2;
-          const x = Math.cos(edgeAngle) * 0.45;
-          const z = Math.sin(edgeAngle) * 0.45;
-          return (
-            <mesh key={`edge-${i}`} position={[x, 0, z]} rotation={[0, edgeAngle, 0]}>
-              <boxGeometry args={[0.02, 0.3, 0.02]} />
-              <meshStandardMaterial color="#cc0000" metalness={0.9} roughness={0.1} />
-            </mesh>
-          );
-        })}
-        {/* Spinning blade tips - extra sharp points */}
-        {Array.from({ length: 8 }, (_, i) => {
-          const tipAngle = (i / 8) * Math.PI * 2;
-          const x = Math.cos(tipAngle) * 0.6;
-          const z = Math.sin(tipAngle) * 0.6;
-          return (
-            <mesh key={`tip-${i}`} position={[x, 0, z]} rotation={[0, tipAngle, 0]}>
-              <octahedronGeometry args={[0.08]} />
               <meshStandardMaterial color="#ff0000" metalness={0.9} roughness={0.1} />
             </mesh>
           );

@@ -45,11 +45,11 @@ export const TugOfWarUI = ({
     const firstWinnerId = winners[0];
     const firstWinner = players.find(p => p.id === firstWinnerId);
     if (firstWinner && typeof firstWinner.position === 'number') {
-      return firstWinner.position < 0 ? 'Red Team' : 'Green Team';
+      return firstWinner.position < 0 ? 'Red Team' : 'Blue Team';
     }
     // Fallback to rope position if player not found
     if (ropePosition === 'left') return 'Red Team';
-    if (ropePosition === 'right') return 'Green Team';
+    if (ropePosition === 'right') return 'Blue Team';
     return 'Balanced';
   };
 
@@ -96,11 +96,11 @@ export const TugOfWarUI = ({
       return { text: 'Red Team is winning', color: 'text-red-500' };
     }
     if (rightPull > leftPull) {
-      return { text: 'Green Team is winning', color: 'text-green-500' };
+      return { text: 'Blue Team is winning', color: 'text-blue-500' };
     }
     // Tie while pulling → fall back to rope position
     if (ropePosition === 'left') return { text: 'Red Team Pulling!', color: 'text-red-500' };
-    if (ropePosition === 'right') return { text: 'Green Team Pulling!', color: 'text-green-500' };
+    if (ropePosition === 'right') return { text: 'Blue Team Pulling!', color: 'text-blue-500' };
     return { text: 'Balanced', color: 'text-yellow-500' };
   };
 
@@ -237,8 +237,8 @@ export const TugOfWarUI = ({
                 ></div>
               </div>
               <div className="text-center">
-                <div className={`w-4 h-4 rounded-full mx-auto mb-1 ${ropePosition === 'right' ? 'bg-green-500' : 'bg-gray-500'}`}></div>
-                <div className="text-xs text-green-400">Green Team</div>
+                <div className={`w-4 h-4 rounded-full mx-auto mb-1 ${ropePosition === 'right' ? 'bg-blue-500' : 'bg-gray-500'}`}></div>
+                <div className="text-xs text-blue-400">Blue Team</div>
               </div>
             </div>
             {(() => { const s = getRopeStatus(); return (

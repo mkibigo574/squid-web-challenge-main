@@ -94,18 +94,18 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
   useFrame((state) => {
     const t = state.clock.elapsedTime;
     if (!detached) {
-      // Follow rope-driven position/animation
+      // Follow rope-driven position/animation - optimized for performance
       currentXRef.current = x;
       const sideSign = side === 'left' ? -1 : 1;
-      const lean = sideSign * effort * 0.32 + Math.sin(t * 8 + (x + z)) * 0.05 * effort;
-      const bob = Math.sin(t * 12 + x) * 0.06 * effort;
+      const lean = sideSign * effort * 0.32 + Math.sin(t * 4 + (x + z)) * 0.05 * effort; // Reduced frequency
+      const bob = Math.sin(t * 6 + x) * 0.06 * effort; // Reduced frequency
       
       // Handle floating phase (floating during floating and positioning phases)
       let baseY = PLAYER_BASE_Y;
       if (phase === 'floating' || phase === 'positioning') {
         baseY = PLAYER_BASE_Y + FLOATING_OFFSET;
-        // Gentle floating animation
-        const floatBob = Math.sin(t * 3) * 0.1;
+        // Gentle floating animation - optimized
+        const floatBob = Math.sin(t * 2) * 0.1; // Reduced frequency
         baseY += floatBob;
       }
       
@@ -591,12 +591,12 @@ export const MultiplayerTugOfWarV2 = () => {
             <button 
               className={`px-3 py-1 rounded text-white font-semibold transition-all duration-200 transform ${
                 selectedTeam === 'blue' 
-                  ? 'bg-green-500 scale-110 shadow-lg ring-2 ring-green-300 ring-opacity-50' 
-                  : 'bg-green-600 hover:bg-green-700 hover:scale-105'
+                  ? 'bg-blue-500 scale-110 shadow-lg ring-2 ring-blue-300 ring-opacity-50' 
+                  : 'bg-blue-600 hover:bg-blue-700 hover:scale-105'
               }`}
               onClick={() => chooseTeam('blue')}
             >
-              {selectedTeam === 'blue' ? '✓ Green Team' : 'Join Green'}
+              {selectedTeam === 'blue' ? '✓ Blue Team' : 'Join Blue'}
             </button>
           </>
         )}
@@ -662,10 +662,10 @@ export const MultiplayerTugOfWarV2 = () => {
                     {redTeamPlayers.filter(p => !p.isEliminated).length}/9
                   </div>
                 </div>
-                <div className="text-center bg-green-50 rounded p-2 border border-green-200">
+                <div className="text-center bg-blue-50 rounded p-2 border border-blue-200">
                   <div className="text-lg mb-1">🔵</div>
-                  <div className="font-bold text-green-700 text-sm">Blue Team</div>
-                  <div className="text-sm font-black text-green-800">
+                  <div className="font-bold text-blue-700 text-sm">Blue Team</div>
+                  <div className="text-sm font-black text-blue-800">
                     {blueTeamPlayers.filter(p => !p.isEliminated).length}/9
                   </div>
                 </div>
@@ -739,17 +739,17 @@ export const MultiplayerTugOfWarV2 = () => {
 
       {/* Blue Team Roster - Right Side */}
       {tournamentMode && blueTeamPlayers.length > 0 && (
-        <div key={`blue-team-${forceUpdate}`} className="absolute top-14 right-2 bg-gradient-to-br from-green-50 via-green-100 to-green-50 rounded-xl p-2 border-2 border-green-400 shadow-lg max-w-xs transform transition-all duration-300 hover:scale-105">
+        <div key={`blue-team-${forceUpdate}`} className="absolute top-14 right-2 bg-gradient-to-br from-blue-50 via-blue-100 to-blue-50 rounded-xl p-2 border-2 border-blue-400 shadow-lg max-w-xs transform transition-all duration-300 hover:scale-105">
           {/* Animated background */}
-          <div className="absolute inset-0 bg-gradient-to-r from-green-200 via-blue-200 to-green-200 rounded-2xl opacity-20 animate-pulse"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-200 via-blue-300 to-blue-200 rounded-2xl opacity-20 animate-pulse"></div>
           
           <div className="relative z-10">
             <div className="flex items-center justify-center mb-2">
               <div className="text-lg mr-1 animate-bounce">🔵</div>
-              <h4 className="font-black text-sm bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+              <h4 className="font-black text-sm bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
                 Blue Team
               </h4>
-              <div className="ml-1 bg-green-600 text-white px-2 py-0.5 rounded-full text-xs font-bold">
+              <div className="ml-1 bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs font-bold">
                 {blueTeamPlayers.filter(p => !p.isEliminated).length}/9
               </div>
             </div>
@@ -835,54 +835,54 @@ export const MultiplayerTugOfWarV2 = () => {
       {/* Tournament Winner Modal */}
       {phase === 'tournament-winner' && tournamentWinner && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          {/* Money Rain Background */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {Array.from({ length: 30 }, (_, i) => (
-              <div
-                key={i}
-                className="absolute text-4xl opacity-90 money-rain"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: '-10%',
-                  animationDuration: `${3 + Math.random() * 2}s`,
-                  animationDelay: `${Math.random() * 5}s`,
-                  transform: `rotate(${Math.random() * 360}deg)`,
-                }}
-              >
-                💵
-              </div>
-            ))}
-            {Array.from({ length: 20 }, (_, i) => (
-              <div
-                key={`coin-${i}`}
-                className="absolute text-3xl opacity-80 money-rain"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: '-10%',
-                  animationDuration: `${2.5 + Math.random() * 1.5}s`,
-                  animationDelay: `${Math.random() * 4}s`,
-                  transform: `rotate(${Math.random() * 360}deg)`,
-                }}
-              >
-                🪙
-              </div>
-            ))}
-            {Array.from({ length: 15 }, (_, i) => (
-              <div
-                key={`bill-${i}`}
-                className="absolute text-2xl opacity-70 money-rain"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: '-10%',
-                  animationDuration: `${4 + Math.random() * 2}s`,
-                  animationDelay: `${Math.random() * 6}s`,
-                  transform: `rotate(${Math.random() * 360}deg)`,
-                }}
-              >
-                💴
-              </div>
-            ))}
-          </div>
+        {/* Money Rain Background - Optimized for performance */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {Array.from({ length: 15 }, (_, i) => (
+            <div
+              key={i}
+              className="absolute text-4xl opacity-90 money-rain"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: '-10%',
+                animationDuration: `${3 + Math.random() * 2}s`,
+                animationDelay: `${Math.random() * 5}s`,
+                transform: `rotate(${Math.random() * 360}deg)`,
+              }}
+            >
+              💵
+            </div>
+          ))}
+          {Array.from({ length: 10 }, (_, i) => (
+            <div
+              key={`coin-${i}`}
+              className="absolute text-3xl opacity-80 money-rain"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: '-10%',
+                animationDuration: `${2.5 + Math.random() * 1.5}s`,
+                animationDelay: `${Math.random() * 4}s`,
+                transform: `rotate(${Math.random() * 360}deg)`,
+              }}
+            >
+              🪙
+            </div>
+          ))}
+          {Array.from({ length: 8 }, (_, i) => (
+            <div
+              key={`bill-${i}`}
+              className="absolute text-2xl opacity-70 money-rain"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: '-10%',
+                animationDuration: `${4 + Math.random() * 2}s`,
+                animationDelay: `${Math.random() * 6}s`,
+                transform: `rotate(${Math.random() * 360}deg)`,
+              }}
+            >
+              💴
+            </div>
+          ))}
+        </div>
           
           {/* Main Modal */}
           <div className="relative bg-gradient-to-br from-yellow-400 via-yellow-300 to-yellow-500 rounded-3xl p-8 max-w-lg mx-4 text-center shadow-2xl border-4 border-yellow-600 animate-pulse">
@@ -940,7 +940,7 @@ export const MultiplayerTugOfWarV2 = () => {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           {/* Money Rain Background */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {Array.from({ length: 18 }, (_, i) => (
+            {Array.from({ length: 9 }, (_, i) => (
               <div
                 key={i}
                 className="absolute text-3xl opacity-80 money-rain"
@@ -955,7 +955,7 @@ export const MultiplayerTugOfWarV2 = () => {
                 💵
               </div>
             ))}
-            {Array.from({ length: 12 }, (_, i) => (
+            {Array.from({ length: 6 }, (_, i) => (
               <div
                 key={`coin-${i}`}
                 className="absolute text-2xl opacity-70 money-rain"
@@ -970,7 +970,7 @@ export const MultiplayerTugOfWarV2 = () => {
                 🪙
               </div>
             ))}
-            {Array.from({ length: 8 }, (_, i) => (
+            {Array.from({ length: 4 }, (_, i) => (
               <div
                 key={`bill-${i}`}
                 className="absolute text-xl opacity-60 money-rain"
@@ -995,12 +995,12 @@ export const MultiplayerTugOfWarV2 = () => {
             <div className="animate-bounce">
                 <div className="text-7xl mb-4">🎉</div>
                 <h2 className="text-3xl font-black text-gray-900 mb-2 drop-shadow-lg">
-                  <span className="bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-                    {selectedTeam === 'blue' ? 'GREEN TEAM' : 'RED TEAM'}
+                  <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                    {selectedTeam === 'blue' ? 'BLUE TEAM' : 'RED TEAM'}
                   </span>
                   <br />
                   <span className="text-xl text-gray-800">WINS!</span>
-              </h2>
+                </h2>
                 <p className="text-lg text-gray-800 font-bold mb-4">🎊 Congratulations! 🎊</p>
             </div>
               
@@ -1038,7 +1038,7 @@ export const MultiplayerTugOfWarV2 = () => {
             <div className="animate-pulse">
               <div className="text-6xl mb-4">💀</div>
               <h2 className="text-3xl font-bold text-red-800 mb-2">
-                {selectedTeam === 'blue' ? 'Green Team' : 'Red Team'} Eliminated!
+                {selectedTeam === 'blue' ? 'Blue Team' : 'Red Team'} Eliminated!
               </h2>
               <p className="text-red-600 mb-6">Better luck next time!</p>
             </div>

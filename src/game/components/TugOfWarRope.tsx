@@ -132,17 +132,17 @@ export const TugOfWarRope = ({ ropePosition, gameState, pullStrength = 0, isPull
           </mesh>
         </group>
         <group ref={rightHandleRef} position={[6, 0, 0]}>
-          {/* Green Team Handle */}
+          {/* Blue Team Handle */}
           <mesh>
             <cylinderGeometry args={[0.3, 0.3, 0.6]} />
-            <meshStandardMaterial color="#32CD32" />
+            <meshStandardMaterial color="#0066CC" />
           </mesh>
-          {/* Green Team Label */}
+          {/* Blue Team Label */}
           <mesh position={[0, 2, 0]}>
             <planeGeometry args={[1.5, 0.4]} />
-            <meshStandardMaterial color="#32CD32" transparent opacity={0.9} />
+            <meshStandardMaterial color="#0066CC" transparent opacity={0.9} />
           </mesh>
-          {/* Green Team Text */}
+          {/* Blue Team Text */}
           <mesh position={[0, 2.2, 0.01]}>
             <planeGeometry args={[1.2, 0.2]} />
             <meshStandardMaterial color="#FFFFFF" transparent opacity={0.8} />

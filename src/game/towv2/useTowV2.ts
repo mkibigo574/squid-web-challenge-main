@@ -380,7 +380,7 @@ export function useTowV2() {
     if (!host || phase !== 'pulling') return;
     const id = setInterval(() => {
       const now = Date.now();
-      if (now - lastUpdateRef.current < 100) return;
+      if (now - lastUpdateRef.current < 150) return; // Reduced frequency for better performance
       lastUpdateRef.current = now;
 
       const red = players.filter(p => p.team === 'red');
