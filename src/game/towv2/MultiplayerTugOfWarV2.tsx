@@ -386,6 +386,7 @@ export const MultiplayerTugOfWarV2 = () => {
   const [showEliminationModal, setShowEliminationModal] = useState(false);
   const [roundCountdown, setRoundCountdown] = useState(3);
   const [forceUpdate, setForceUpdate] = useState(0);
+  const [keyPressFeedback, setKeyPressFeedback] = useState(false);
 
   // Handle new tournament - reset and start fresh
   const handleNewTournament = () => {
@@ -405,29 +406,56 @@ export const MultiplayerTugOfWarV2 = () => {
   };
 
   useEffect(() => {
+    const pressedKeys = new Set<string>();
     let lastInputTime = 0;
-    const inputCooldown = 100; // 100ms cooldown between inputs
+    const inputCooldown = 200; // 200ms cooldown between inputs (increased to prevent rapid tapping)
     
     const onKeyDown = (e: KeyboardEvent) => {
       // Only respond to 'W' key or 'Up arrow' key
       if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
+        // Prevent default to avoid multiple keydown events
+        e.preventDefault();
+        
+        // Check if key is already being held down (cheating prevention)
+        if (pressedKeys.has(e.key.toLowerCase())) {
+          return; // Ignore if key is already pressed
+        }
+        
+        // Add key to pressed set
+        pressedKeys.add(e.key.toLowerCase());
+        
         const now = Date.now();
         if (now - lastInputTime >= inputCooldown) {
           lastInputTime = now;
-          setPower(p => Math.min(1, p + 0.25));
+          // Single key press - add power once
+          setPower(p => Math.min(1, p + 0.3)); // Increased power per press since no holding allowed
+          
+          // Show visual feedback for key press
+          setKeyPressFeedback(true);
+          setTimeout(() => setKeyPressFeedback(false), 150);
         }
       }
     };
     
+    const onKeyUp = (e: KeyboardEvent) => {
+      // Remove key from pressed set when released
+      if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
+        pressedKeys.delete(e.key.toLowerCase());
+      }
+    };
+    
     window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    
     return () => { 
-      window.removeEventListener('keydown', onKeyDown); 
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
     };
   }, []);
 
   useEffect(() => {
     const id = setInterval(() => {
-      setPower(p => Math.max(0, p - 0.12)); // Increased decay rate since no holding allowed
+      setPower(p => Math.max(0, p - 0.08)); // Balanced decay rate for single key presses
     }, 100);
     return () => clearInterval(id);
   }, []);
@@ -625,7 +653,13 @@ export const MultiplayerTugOfWarV2 = () => {
       
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-black/90 text-sm bg-white/90 px-3 py-2 rounded border border-gray-400 shadow-lg">
         {phase !== 'results' && (
-          <>Power: {Math.round((phase === 'pulling' ? power : 0)*100)}% — press W or ↑ rapidly to pull (keyboard only!)</>
+          <div className="flex items-center gap-2">
+            <span>Power: {Math.round((phase === 'pulling' ? power : 0)*100)}%</span>
+            {keyPressFeedback && (
+              <span className="text-green-600 font-bold animate-pulse">✓ PRESS!</span>
+            )}
+            <span className="text-xs text-gray-600">— press W or ↑ rapidly to pull (no holding!)</span>
+          </div>
         )}
       </div>
 
