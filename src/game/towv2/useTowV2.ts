@@ -196,23 +196,29 @@ export function useTowV2() {
   }, [tournamentMode, redTeamPlayers.length]);
 
   // Tournament functions - defined early to avoid circular dependency
-  const selectRoundPlayers = useCallback(() => {
+  const selectRoundPlayers = useCallback((customRedPlayers?: TournamentPlayer[], customBluePlayers?: TournamentPlayer[], customRound?: number) => {
     if (!host) return;
     
+    // Use custom players if provided, otherwise use current state
+    const currentRedPlayers = customRedPlayers || redTeamPlayers;
+    const currentBluePlayers = customBluePlayers || blueTeamPlayers;
+    const currentRoundNumber = customRound || currentRound;
+    
     // Get available (non-eliminated) players
-    const availableRed = redTeamPlayers.filter(p => !p.isEliminated);
-    const availableBlue = blueTeamPlayers.filter(p => !p.isEliminated);
+    const availableRed = currentRedPlayers.filter(p => !p.isEliminated);
+    const availableBlue = currentBluePlayers.filter(p => !p.isEliminated);
     
     console.log('Selecting round players:', { 
-      totalRed: redTeamPlayers.length, 
+      totalRed: currentRedPlayers.length, 
       availableRed: availableRed.length,
-      totalBlue: blueTeamPlayers.length, 
+      totalBlue: currentBluePlayers.length, 
       availableBlue: availableBlue.length,
-      redEliminated: redTeamPlayers.filter(p => p.isEliminated).length,
-      blueEliminated: blueTeamPlayers.filter(p => p.isEliminated).length
+      redEliminated: currentRedPlayers.filter(p => p.isEliminated).length,
+      blueEliminated: currentBluePlayers.filter(p => p.isEliminated).length,
+      round: currentRoundNumber
     });
     
-    // Check if tournament is over
+    // Check if tournament is over - either team has no players left
     if (availableRed.length === 0) {
       console.log('Red team eliminated - Blue team wins!');
       setTournamentWinner('blue');
@@ -228,14 +234,35 @@ export function useTowV2() {
       return;
     }
     
-    // Select 3 random players from each team (or all remaining if less than 3)
+    // Check if either team has less than 3 players - tournament cannot continue
+    if (availableRed.length < 3) {
+      console.log('Red team has insufficient players for next round:', availableRed.length);
+      setTournamentWinner('blue');
+      setPhase('tournament-winner');
+      broadcastState({ v2: true, phase: 'tournament-winner', tournamentWinner: 'blue' });
+      return;
+    }
+    if (availableBlue.length < 3) {
+      console.log('Blue team has insufficient players for next round:', availableBlue.length);
+      setTournamentWinner('red');
+      setPhase('tournament-winner');
+      broadcastState({ v2: true, phase: 'tournament-winner', tournamentWinner: 'red' });
+      return;
+    }
+    
+    // Select exactly 3 random players from each team (both teams guaranteed to have at least 3)
     const selectRandomPlayers = (players: TournamentPlayer[], count: number) => {
       const shuffled = [...players].sort(() => 0.5 - Math.random());
-      return shuffled.slice(0, Math.min(count, players.length));
+      return shuffled.slice(0, count);
     };
     
     const selectedRed = selectRandomPlayers(availableRed, 3);
     const selectedBlue = selectRandomPlayers(availableBlue, 3);
+    
+    console.log('Selected players for round:', {
+      red: selectedRed.map(p => ({ id: p.id, playerNumber: p.playerNumber, isEliminated: p.isEliminated })),
+      blue: selectedBlue.map(p => ({ id: p.id, playerNumber: p.playerNumber, isEliminated: p.isEliminated }))
+    });
     
     setSelectedRedPlayers(selectedRed);
     setSelectedBluePlayers(selectedBlue);
@@ -250,7 +277,7 @@ export function useTowV2() {
       rope: 0,
       selectedRedPlayers: selectedRed,
       selectedBluePlayers: selectedBlue,
-      currentRound
+      currentRound: currentRoundNumber
     });
   }, [host, redTeamPlayers, blueTeamPlayers, currentRound, broadcastState]);
 
@@ -268,7 +295,14 @@ export function useTowV2() {
       eliminatedPlayers.some(ep => ep.id === p.id) ? { ...p, isEliminated: true } : p
     );
     
-    console.log('Updated players:', { updatedRedPlayers, updatedBluePlayers });
+    console.log('Updated players:', { 
+      updatedRedPlayers: updatedRedPlayers.map(p => ({ id: p.id, isEliminated: p.isEliminated })),
+      updatedBluePlayers: updatedBluePlayers.map(p => ({ id: p.id, isEliminated: p.isEliminated })),
+      remainingRed: updatedRedPlayers.filter(p => !p.isEliminated).length,
+      remainingBlue: updatedBluePlayers.filter(p => !p.isEliminated).length
+    });
+    
+    // Batch all state updates together to ensure UI updates immediately
     setRedTeamPlayers(updatedRedPlayers);
     setBlueTeamPlayers(updatedBluePlayers);
     
@@ -284,6 +318,7 @@ export function useTowV2() {
     setRoundResults(prev => [...prev, roundResult]);
     setPhase('round-results');
     
+    // Broadcast the updated state immediately
     broadcastState({ 
       v2: true, 
       phase: 'round-results',
@@ -292,17 +327,43 @@ export function useTowV2() {
       blueTeamPlayers: updatedBluePlayers
     });
     
+    // Check if tournament can continue after this round
+    const remainingRed = updatedRedPlayers.filter(p => !p.isEliminated);
+    const remainingBlue = updatedBluePlayers.filter(p => !p.isEliminated);
+    
     // Auto-advance to next round after 3 seconds with countdown
     setTimeout(() => {
-      setCurrentRound(prev => prev + 1);
+      // Check if tournament should end due to insufficient players
+      if (remainingRed.length < 3 || remainingBlue.length < 3) {
+        console.log('Tournament ending due to insufficient players:', { 
+          remainingRed: remainingRed.length, 
+          remainingBlue: remainingBlue.length 
+        });
+        
+        // Determine winner based on remaining players
+        const tournamentWinner = remainingRed.length >= remainingBlue.length ? 'red' : 'blue';
+        setTournamentWinner(tournamentWinner);
+        setPhase('tournament-winner');
+        broadcastState({ v2: true, phase: 'tournament-winner', tournamentWinner });
+        return;
+      }
+      
+      const nextRound = currentRound + 1;
+      setCurrentRound(nextRound);
       // Start countdown phase for next round
       setPhase('floating');
-      broadcastState({ v2: true, phase: 'floating', currentRound: currentRound + 1 });
+      broadcastState({ v2: true, phase: 'floating', currentRound: nextRound });
       
       // After 3 seconds, select next round players and start
+      // Pass the updated player state directly to avoid closure issues
       setTimeout(() => {
-        selectRoundPlayers();
-      }, 3000);
+        console.log('About to select round players for round:', nextRound);
+        console.log('Using updated state for selection:', {
+          redTeamPlayers: updatedRedPlayers.map(p => ({ id: p.id, isEliminated: p.isEliminated })),
+          blueTeamPlayers: updatedBluePlayers.map(p => ({ id: p.id, isEliminated: p.isEliminated }))
+        });
+        selectRoundPlayers(updatedRedPlayers, updatedBluePlayers, nextRound);
+      }, 1000); // Reduced delay to 1 second for faster testing
     }, 3000);
   }, [host, selectedRedPlayers, selectedBluePlayers, redTeamPlayers, blueTeamPlayers, currentRound, selectRoundPlayers, broadcastState]);
 
@@ -326,7 +387,22 @@ export function useTowV2() {
       const blue = players.filter(p => p.team === 'blue');
       const redPower = red.reduce((s, p) => s + (p.isPulling ? p.pullPower : 0), 0);
       const bluePower = blue.reduce((s, p) => s + (p.isPulling ? p.pullPower : 0), 0);
-      const delta = (bluePower - redPower) * 0.15; // increased bias factor for faster movement
+      
+      // Check if any team is pulling
+      const isAnyTeamPulling = redPower > 0 || bluePower > 0;
+      
+      let delta;
+      if (isAnyTeamPulling) {
+        // Normal pulling physics when teams are active
+        delta = (bluePower - redPower) * 0.15;
+      } else {
+        // Loose rope physics when no team is pulling - rope slowly returns to center
+        const centerForce = -rope * 0.05; // Gentle pull toward center
+        const looseness = 0.02; // Add some random looseness
+        const randomFactor = (Math.random() - 0.5) * looseness;
+        delta = centerForce + randomFactor;
+      }
+      
       let next = Math.max(-1, Math.min(1, rope + delta));
       // victory detection
       if (next >= 0.95) {
@@ -413,8 +489,7 @@ export function useTowV2() {
     setSelectedTeam(team);
     // Update presence with team info to ensure consistent team assignment
     multiplayerManager.updatePresence({ 
-      position,
-      team: team // Add team info to presence
+      position
     });
   }, []);
 
@@ -426,26 +501,39 @@ export function useTowV2() {
         const availableRed = redTeamPlayers.filter(p => !p.isEliminated);
         const availableBlue = blueTeamPlayers.filter(p => !p.isEliminated);
         
-        // Check if tournament is over
+        // Check if tournament is over - either team has no players left
         if (availableRed.length === 0) {
+          console.log('Red team eliminated - Blue team wins!');
           setTournamentWinner('blue');
           setPhase('tournament-winner');
           broadcastState({ v2: true, phase: 'tournament-winner', tournamentWinner: 'blue' });
           return;
         }
         if (availableBlue.length === 0) {
+          console.log('Blue team eliminated - Red team wins!');
           setTournamentWinner('red');
           setPhase('tournament-winner');
           broadcastState({ v2: true, phase: 'tournament-winner', tournamentWinner: 'red' });
           return;
         }
         
-        // Select exactly 3 players from each team (must have at least 3 available)
-        if (availableRed.length < 3 || availableBlue.length < 3) {
-          console.log('Not enough players for a round:', { availableRed: availableRed.length, availableBlue: availableBlue.length });
+        // Check if either team has less than 3 players - tournament cannot continue
+        if (availableRed.length < 3) {
+          console.log('Red team has insufficient players for next round:', availableRed.length);
+          setTournamentWinner('blue');
+          setPhase('tournament-winner');
+          broadcastState({ v2: true, phase: 'tournament-winner', tournamentWinner: 'blue' });
+          return;
+        }
+        if (availableBlue.length < 3) {
+          console.log('Blue team has insufficient players for next round:', availableBlue.length);
+          setTournamentWinner('red');
+          setPhase('tournament-winner');
+          broadcastState({ v2: true, phase: 'tournament-winner', tournamentWinner: 'red' });
           return;
         }
         
+        // Select exactly 3 players from each team (both teams guaranteed to have at least 3)
         const selectRandomPlayers = (players: TournamentPlayer[], count: number) => {
           const shuffled = [...players].sort(() => 0.5 - Math.random());
           return shuffled.slice(0, count);

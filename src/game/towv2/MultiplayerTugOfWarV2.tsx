@@ -1,5 +1,6 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import * as THREE from 'three';
 import { TugOfWarEnvironment } from '../components/TugOfWarEnvironment';
 import { useTowV2 } from './useTowV2';
@@ -370,6 +371,7 @@ function TeamPlayers({ rope, redEffort, blueEffort, detachedRed, detachedBlue, p
 }
 
 export const MultiplayerTugOfWarV2 = () => {
+  const navigate = useNavigate();
   const { 
     phase, rope, start, setSelfPulling, countdown, chooseTeam, startGame, reset, winner, players, selectedTeam,
     // Tournament props
@@ -383,6 +385,24 @@ export const MultiplayerTugOfWarV2 = () => {
   const [showWinModal, setShowWinModal] = useState(false);
   const [showEliminationModal, setShowEliminationModal] = useState(false);
   const [roundCountdown, setRoundCountdown] = useState(3);
+  const [forceUpdate, setForceUpdate] = useState(0);
+
+  // Handle new tournament - reset and start fresh
+  const handleNewTournament = () => {
+    console.log('Starting new tournament...');
+    resetTournament();
+    // Initialize a fresh tournament
+    setTimeout(() => {
+      initializeTournament();
+    }, 100);
+  };
+
+  // Handle go to lobby - navigate back to lobby room
+  const handleGoToLobby = () => {
+    console.log('Navigating to lobby...');
+    resetTournament();
+    navigate('/lobby');
+  };
 
   useEffect(() => {
     let lastInputTime = 0;
@@ -411,6 +431,11 @@ export const MultiplayerTugOfWarV2 = () => {
     }, 100);
     return () => clearInterval(id);
   }, []);
+
+  // Force UI update when team players change to ensure eliminated players are properly reflected
+  useEffect(() => {
+    setForceUpdate(prev => prev + 1);
+  }, [redTeamPlayers, blueTeamPlayers]);
 
   // Countdown effect for tournament rounds
   useEffect(() => {
@@ -547,7 +572,7 @@ export const MultiplayerTugOfWarV2 = () => {
       </div>
       <div className="absolute top-4 left-4 flex gap-2">
         {phase === 'floating' && (
-          <button className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded" onClick={start}>
+          <button className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded" onClick={start}>
             {tournamentMode ? 'Start Tournament' : 'Choose your Team'}
           </button>
         )}
@@ -575,7 +600,6 @@ export const MultiplayerTugOfWarV2 = () => {
             </button>
           </>
         )}
-        <button className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded" onClick={reset}>Reset</button>
         {phase === 'lobby' && (
           <button className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded" onClick={initializeTournament}>Start Tournament</button>
         )}
@@ -583,7 +607,7 @@ export const MultiplayerTugOfWarV2 = () => {
           <button className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded" onClick={selectRoundPlayers}>Select Round Players</button>
         )}
         {tournamentMode && (
-          <button className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded" onClick={resetTournament}>End Tournament</button>
+          <button className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded" onClick={handleGoToLobby}>End Tournament</button>
         )}
       </div>
       
@@ -591,10 +615,10 @@ export const MultiplayerTugOfWarV2 = () => {
           {phase === 'positioning' && selectedTeam && tournamentMode && (
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ transform: 'translate(-50%, calc(-50% - 25rem))' }}>
               <button 
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xl px-8 py-4 rounded-lg shadow-2xl transform hover:scale-110 transition-all duration-300 border-2 border-blue-400"
+                className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-black text-2xl px-12 py-6 rounded-2xl shadow-2xl transform hover:scale-110 transition-all duration-300 border-4 border-purple-400 animate-pulse"
                 onClick={startGame}
               >
-                Start Round
+                🎮 Start Round 🎮
               </button>
             </div>
           )}
@@ -607,118 +631,305 @@ export const MultiplayerTugOfWarV2 = () => {
 
       {/* Tournament Info Panel */}
       {tournamentMode && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-white/90 rounded-lg p-4 border border-gray-400 shadow-lg max-w-sm">
-          <h3 className="font-bold text-lg mb-2">Tournament Progress</h3>
-          <div className="text-sm space-y-1">
-            <div>Round: {currentRound}</div>
-            <div className="flex justify-between gap-8">
-              <span className="text-red-600">Red Team: {redTeamPlayers.filter(p => !p.isEliminated).length}/9</span>
-              <span className="text-green-600">Green Team: {blueTeamPlayers.filter(p => !p.isEliminated).length}/9</span>
+        <div key={`tournament-info-${forceUpdate}`} className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-gradient-to-br from-white via-gray-50 to-white rounded-xl p-3 border-2 border-purple-300 shadow-2xl max-w-sm transform transition-all duration-300 hover:scale-105 z-50 backdrop-blur-sm">
+          {/* Animated background pattern */}
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-100 via-pink-100 to-purple-100 rounded-2xl opacity-30 animate-pulse"></div>
+          
+          <div className="relative z-10">
+            <div className="flex items-center justify-center mb-2">
+              <div className="text-xl mr-1 animate-spin">🏆</div>
+              <h3 className="font-black text-lg bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                Tournament Progress
+              </h3>
             </div>
-            {selectedRedPlayers.length > 0 && (
-              <div className="mt-2">
-                <div className="text-red-600 font-semibold">Round {currentRound} Players:</div>
-                <div className="text-xs">
-                  Red: {selectedRedPlayers.map(p => p.playerNumber).join(', ')}
-                </div>
-                <div className="text-xs">
-                  Green: {selectedBluePlayers.map(p => p.playerNumber).join(', ')}
+            
+            <div className="bg-white/95 rounded-lg p-2 shadow-inner border border-gray-200">
+              <div className="text-center mb-2">
+                <div className="text-xl font-bold text-purple-700 mb-1">Round {currentRound}</div>
+                <div className="w-full bg-gray-200 rounded-full h-1.5 mb-1">
+                  <div 
+                    className="bg-gradient-to-r from-purple-500 to-pink-500 h-1.5 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min((currentRound / 10) * 100, 100)}%` }}
+                  ></div>
                 </div>
               </div>
-            )}
+              
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="text-center bg-red-50 rounded p-2 border border-red-200">
+                  <div className="text-lg mb-1">🔴</div>
+                  <div className="font-bold text-red-700 text-sm">Red Team</div>
+                  <div className="text-sm font-black text-red-800">
+                    {redTeamPlayers.filter(p => !p.isEliminated).length}/9
+                  </div>
+                </div>
+                <div className="text-center bg-green-50 rounded p-2 border border-green-200">
+                  <div className="text-lg mb-1">🔵</div>
+                  <div className="font-bold text-green-700 text-sm">Blue Team</div>
+                  <div className="text-sm font-black text-green-800">
+                    {blueTeamPlayers.filter(p => !p.isEliminated).length}/9
+                  </div>
+                </div>
+              </div>
+              
+              {selectedRedPlayers.length > 0 && (
+                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded p-2 border border-yellow-300">
+                  <div className="text-center font-bold text-yellow-800 text-xs mb-1">Round {currentRound} Players</div>
+                  <div className="grid grid-cols-2 gap-1 text-xs">
+                    <div className="bg-red-100 rounded p-1">
+                      <div className="font-semibold text-red-700">Red: {selectedRedPlayers.map(p => p.playerNumber).join(', ')}</div>
+                    </div>
+                    <div className="bg-green-100 rounded p-1">
+                      <div className="font-semibold text-green-700">Blue: {selectedBluePlayers.map(p => p.playerNumber).join(', ')}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {/* Red Team Roster - Left Side */}
       {tournamentMode && redTeamPlayers.length > 0 && (
-        <div className="absolute top-16 left-4 bg-red-50/90 rounded-lg p-3 border-2 border-red-300 shadow-lg max-w-xs">
-          <h4 className="font-bold text-red-700 mb-2 text-center">Red Team ({redTeamPlayers.filter(p => !p.isEliminated).length}/9)</h4>
-          <div className="grid grid-cols-3 gap-1 text-xs">
-            {redTeamPlayers.map((player) => (
-              <div
-                key={player.id}
-                className={`p-1 rounded text-center ${
-                  player.isEliminated 
-                    ? 'bg-red-200 text-red-500 line-through' 
-                    : selectedRedPlayers.some(p => p.id === player.id)
-                    ? 'bg-red-600 text-white font-bold'
-                    : 'bg-red-100 text-red-700'
-                }`}
-              >
-                P{player.playerNumber}
+        <div key={`red-team-${forceUpdate}`} className="absolute top-14 left-2 bg-gradient-to-br from-red-50 via-red-100 to-red-50 rounded-xl p-2 border-2 border-red-400 shadow-lg max-w-xs transform transition-all duration-300 hover:scale-105">
+          {/* Animated background */}
+          <div className="absolute inset-0 bg-gradient-to-r from-red-200 via-pink-200 to-red-200 rounded-2xl opacity-20 animate-pulse"></div>
+          
+          <div className="relative z-10">
+            <div className="flex items-center justify-center mb-2">
+              <div className="text-lg mr-1 animate-bounce">🔴</div>
+              <h4 className="font-black text-sm bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+                Red Team
+              </h4>
+              <div className="ml-1 bg-red-600 text-white px-2 py-0.5 rounded-full text-xs font-bold">
+                {redTeamPlayers.filter(p => !p.isEliminated).length}/9
               </div>
-            ))}
+            </div>
+            
+            <div className="grid grid-cols-3 gap-1">
+              {redTeamPlayers.map((player) => (
+                <div
+                  key={player.id}
+                  className={`p-1 rounded text-center font-bold text-xs transform transition-all duration-300 hover:scale-110 ${
+                    player.isEliminated 
+                      ? 'bg-red-200 text-red-500 line-through opacity-60' 
+                      : selectedRedPlayers.some(p => p.id === player.id)
+                      ? 'bg-gradient-to-br from-red-600 to-red-700 text-white shadow-lg animate-pulse'
+                      : 'bg-gradient-to-br from-red-100 to-red-200 text-red-700 hover:from-red-200 hover:to-red-300'
+                  }`}
+                >
+                  <div className="text-sm">👤</div>
+                  <div>P{player.playerNumber}</div>
+                  {selectedRedPlayers.some(p => p.id === player.id) && (
+                    <div className="text-xs mt-0.5">⭐</div>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            {/* Team status indicator */}
+            <div className="mt-1 text-center">
+              <div className="text-xs text-red-600 font-semibold">
+                {redTeamPlayers.filter(p => !p.isEliminated).length >= 3 ? '✅ Ready' : '❌ Insufficient Players'}
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* Blue Team Roster - Right Side */}
       {tournamentMode && blueTeamPlayers.length > 0 && (
-        <div className="absolute top-16 right-4 bg-green-50/90 rounded-lg p-3 border-2 border-green-300 shadow-lg max-w-xs">
-          <h4 className="font-bold text-green-700 mb-2 text-center">Green Team ({blueTeamPlayers.filter(p => !p.isEliminated).length}/9)</h4>
-          <div className="grid grid-cols-3 gap-1 text-xs">
-            {blueTeamPlayers.map((player) => (
-              <div
-                key={player.id}
-                className={`p-1 rounded text-center ${
-                  player.isEliminated 
-                    ? 'bg-green-200 text-green-500 line-through' 
-                    : selectedBluePlayers.some(p => p.id === player.id)
-                    ? 'bg-green-600 text-white font-bold'
-                    : 'bg-green-100 text-green-700'
-                }`}
-              >
-                P{player.playerNumber}
+        <div key={`blue-team-${forceUpdate}`} className="absolute top-14 right-2 bg-gradient-to-br from-green-50 via-green-100 to-green-50 rounded-xl p-2 border-2 border-green-400 shadow-lg max-w-xs transform transition-all duration-300 hover:scale-105">
+          {/* Animated background */}
+          <div className="absolute inset-0 bg-gradient-to-r from-green-200 via-blue-200 to-green-200 rounded-2xl opacity-20 animate-pulse"></div>
+          
+          <div className="relative z-10">
+            <div className="flex items-center justify-center mb-2">
+              <div className="text-lg mr-1 animate-bounce">🔵</div>
+              <h4 className="font-black text-sm bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                Blue Team
+              </h4>
+              <div className="ml-1 bg-green-600 text-white px-2 py-0.5 rounded-full text-xs font-bold">
+                {blueTeamPlayers.filter(p => !p.isEliminated).length}/9
               </div>
-            ))}
+            </div>
+            
+            <div className="grid grid-cols-3 gap-1">
+              {blueTeamPlayers.map((player) => (
+                <div
+                  key={player.id}
+                  className={`p-1 rounded text-center font-bold text-xs transform transition-all duration-300 hover:scale-110 ${
+                    player.isEliminated 
+                      ? 'bg-green-200 text-green-500 line-through opacity-60' 
+                      : selectedBluePlayers.some(p => p.id === player.id)
+                      ? 'bg-gradient-to-br from-green-600 to-green-700 text-white shadow-lg animate-pulse'
+                      : 'bg-gradient-to-br from-green-100 to-green-200 text-green-700 hover:from-green-200 hover:to-green-300'
+                  }`}
+                >
+                  <div className="text-sm">👤</div>
+                  <div>P{player.playerNumber}</div>
+                  {selectedBluePlayers.some(p => p.id === player.id) && (
+                    <div className="text-xs mt-0.5">⭐</div>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            {/* Team status indicator */}
+            <div className="mt-1 text-center">
+              <div className="text-xs text-green-600 font-semibold">
+                {blueTeamPlayers.filter(p => !p.isEliminated).length >= 3 ? '✅ Ready' : '❌ Insufficient Players'}
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* Round Results Panel */}
       {phase === 'round-results' && roundResults.length > 0 && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white/95 rounded-lg p-6 border border-gray-400 shadow-2xl max-w-md">
-          <h3 className="font-bold text-xl mb-4 text-center">Round {roundResults[roundResults.length - 1].roundNumber} Results</h3>
-          <div className="text-center">
-            <div className="text-2xl mb-2">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-white via-gray-50 to-white rounded-3xl p-8 border-4 border-purple-300 shadow-2xl max-w-lg transform transition-all duration-500 animate-pulse">
+          {/* Animated background */}
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-100 via-pink-100 to-purple-100 rounded-3xl opacity-30 animate-pulse"></div>
+          
+          <div className="relative z-10">
+            <div className="text-center mb-6">
+              <div className="text-6xl mb-4 animate-bounce">
               {roundResults[roundResults.length - 1].winner === 'red' ? '🔴' : '🔵'} 
+              </div>
+              <h3 className="font-black text-3xl bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+                Round {roundResults[roundResults.length - 1].roundNumber} Results
+              </h3>
+            </div>
+            
+            <div className="bg-white/90 rounded-2xl p-6 shadow-inner">
+              <div className="text-center mb-6">
+                <div className="text-4xl font-black mb-2">
               {roundResults[roundResults.length - 1].winner === 'red' ? 'Red Team' : 'Blue Team'} Wins!
             </div>
-            <div className="text-sm text-gray-600 mb-4">
-              Eliminated: {roundResults[roundResults.length - 1].eliminatedPlayers.map(p => `${p.team === 'red' ? 'Red' : 'Blue'} P${p.playerNumber}`).join(', ')}
+                <div className="text-2xl mb-4">
+                  {roundResults[roundResults.length - 1].winner === 'red' ? '🔴' : '🔵'}
             </div>
-            <div className="text-xs text-gray-500">Next round starting in 3 seconds...</div>
+              </div>
+              
+              <div className="bg-gradient-to-r from-red-50 to-green-50 rounded-xl p-4 mb-4">
+                <div className="text-center font-bold text-gray-800 mb-2">Eliminated Players</div>
+                <div className="text-sm text-gray-700">
+                  {roundResults[roundResults.length - 1].eliminatedPlayers.map(p => 
+                    `${p.team === 'red' ? '🔴' : '🔵'} ${p.team === 'red' ? 'Red' : 'Blue'} P${p.playerNumber}`
+                  ).join(', ')}
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <div className="text-lg font-bold text-purple-700 mb-2">Next Round Starting...</div>
+                <div className="flex justify-center items-center">
+                  <div className="animate-spin text-2xl mr-2">⏳</div>
+                  <div className="text-sm text-gray-600">3 seconds</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* Tournament Winner Modal */}
       {phase === 'tournament-winner' && tournamentWinner && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl">
-            <div className="text-6xl mb-4">🏆</div>
-            <h2 className="text-3xl font-bold text-gray-800 mb-2">
-              {tournamentWinner === 'red' ? 'Red Team' : 'Blue Team'} Wins Tournament!
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          {/* Money Rain Background */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {Array.from({ length: 30 }, (_, i) => (
+              <div
+                key={i}
+                className="absolute text-4xl opacity-90 money-rain"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: '-10%',
+                  animationDuration: `${3 + Math.random() * 2}s`,
+                  animationDelay: `${Math.random() * 5}s`,
+                  transform: `rotate(${Math.random() * 360}deg)`,
+                }}
+              >
+                💵
+              </div>
+            ))}
+            {Array.from({ length: 20 }, (_, i) => (
+              <div
+                key={`coin-${i}`}
+                className="absolute text-3xl opacity-80 money-rain"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: '-10%',
+                  animationDuration: `${2.5 + Math.random() * 1.5}s`,
+                  animationDelay: `${Math.random() * 4}s`,
+                  transform: `rotate(${Math.random() * 360}deg)`,
+                }}
+              >
+                🪙
+              </div>
+            ))}
+            {Array.from({ length: 15 }, (_, i) => (
+              <div
+                key={`bill-${i}`}
+                className="absolute text-2xl opacity-70 money-rain"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: '-10%',
+                  animationDuration: `${4 + Math.random() * 2}s`,
+                  animationDelay: `${Math.random() * 6}s`,
+                  transform: `rotate(${Math.random() * 360}deg)`,
+                }}
+              >
+                💴
+              </div>
+            ))}
+          </div>
+          
+          {/* Main Modal */}
+          <div className="relative bg-gradient-to-br from-yellow-400 via-yellow-300 to-yellow-500 rounded-3xl p-8 max-w-lg mx-4 text-center shadow-2xl border-4 border-yellow-600 animate-pulse">
+            {/* Confetti Effect */}
+            <div className="absolute -top-4 -left-4 -right-4 -bottom-4 bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 to-blue-500 rounded-3xl opacity-20 animate-spin"></div>
+            
+            <div className="relative z-10">
+              {/* Trophy with animation */}
+              <div className="text-8xl mb-6 animate-bounce">
+                🏆
+              </div>
+              
+              {/* Winner announcement with glow effect */}
+              <h2 className="text-4xl font-black text-gray-900 mb-4 drop-shadow-lg">
+                <span className="bg-gradient-to-r from-red-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
+                  {tournamentWinner === 'red' ? 'RED TEAM' : 'BLUE TEAM'}
+                </span>
+                <br />
+                <span className="text-2xl text-gray-800">WINS TOURNAMENT!</span>
             </h2>
-            <p className="text-gray-600 mb-6">Congratulations on your tournament victory!</p>
+              
+              {/* Celebration text */}
+              <div className="text-2xl mb-6 text-gray-800 font-bold">
+                🎉 CONGRATULATIONS! 🎉
+              </div>
+              
+              {/* Prize money display */}
+              <div className="bg-gradient-to-r from-green-400 to-green-600 text-white rounded-2xl p-4 mb-6 shadow-lg">
+                <div className="text-3xl font-black">💰 $45,600,000,000 💰</div>
+                <div className="text-lg font-semibold">Prize Money Won!</div>
+              </div>
+              
+              {/* Action buttons with enhanced styling */}
             <div className="flex gap-4 justify-center">
               <button
-                onClick={() => {
-                  resetTournament();
-                }}
-                className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
+                  onClick={handleNewTournament}
+                  className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-110 shadow-xl border-2 border-purple-800"
               >
                 🏆 New Tournament
               </button>
               <button
-                onClick={() => {
-                  resetTournament();
-                }}
-                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
-              >
-                🏠 Back to Lobby
+                  onClick={handleGoToLobby}
+                  className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-110 shadow-xl border-2 border-gray-800"
+                >
+                  🏠 Go to Lobby
               </button>
+              </div>
             </div>
           </div>
         </div>
@@ -726,25 +937,95 @@ export const MultiplayerTugOfWarV2 = () => {
 
       {/* Win Modal */}
       {showWinModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          {/* Money Rain Background */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {Array.from({ length: 18 }, (_, i) => (
+              <div
+                key={i}
+                className="absolute text-3xl opacity-80 money-rain"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: '-10%',
+                  animationDuration: `${2.5 + Math.random() * 1.5}s`,
+                  animationDelay: `${Math.random() * 3}s`,
+                  transform: `rotate(${Math.random() * 360}deg)`,
+                }}
+              >
+                💵
+              </div>
+            ))}
+            {Array.from({ length: 12 }, (_, i) => (
+              <div
+                key={`coin-${i}`}
+                className="absolute text-2xl opacity-70 money-rain"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: '-10%',
+                  animationDuration: `${2 + Math.random() * 1}s`,
+                  animationDelay: `${Math.random() * 2.5}s`,
+                  transform: `rotate(${Math.random() * 360}deg)`,
+                }}
+              >
+                🪙
+              </div>
+            ))}
+            {Array.from({ length: 8 }, (_, i) => (
+              <div
+                key={`bill-${i}`}
+                className="absolute text-xl opacity-60 money-rain"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: '-10%',
+                  animationDuration: `${3 + Math.random() * 1.5}s`,
+                  animationDelay: `${Math.random() * 4}s`,
+                  transform: `rotate(${Math.random() * 360}deg)`,
+                }}
+              >
+                💴
+              </div>
+            ))}
+          </div>
+          
+          <div className="relative bg-gradient-to-br from-green-400 via-green-300 to-green-500 rounded-3xl p-6 max-w-md mx-4 text-center shadow-2xl border-4 border-green-600 animate-pulse">
+            {/* Confetti Effect */}
+            <div className="absolute -top-2 -left-2 -right-2 -bottom-2 bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 to-blue-500 rounded-3xl opacity-15 animate-spin"></div>
+            
+            <div className="relative z-10">
             <div className="animate-bounce">
-              <div className="text-6xl mb-4">🎉</div>
-              <h2 className="text-3xl font-bold text-gray-800 mb-2">
-                {selectedTeam === 'blue' ? 'Green Team' : 'Red Team'} Wins!
+                <div className="text-7xl mb-4">🎉</div>
+                <h2 className="text-3xl font-black text-gray-900 mb-2 drop-shadow-lg">
+                  <span className="bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                    {selectedTeam === 'blue' ? 'GREEN TEAM' : 'RED TEAM'}
+                  </span>
+                  <br />
+                  <span className="text-xl text-gray-800">WINS!</span>
               </h2>
-              <p className="text-gray-600 mb-6">Congratulations on your victory!</p>
+                <p className="text-lg text-gray-800 font-bold mb-4">🎊 Congratulations! 🎊</p>
             </div>
-            <div className="flex gap-4 justify-center">
+              
+              {/* Prize money display */}
+              <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-gray-900 rounded-xl p-3 mb-4 shadow-lg">
+                <div className="text-xl font-black">💰 $1,000,000 💰</div>
+                <div className="text-sm font-semibold">Round Prize!</div>
+              </div>
+              
+              <div className="flex gap-3 justify-center">
               <button
                 onClick={() => {
                   setShowWinModal(false);
-                  reset();
                 }}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-110 shadow-lg border-2 border-blue-800"
               >
                 🎮 Play Again
               </button>
+                <button
+                  onClick={handleGoToLobby}
+                  className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-110 shadow-lg border-2 border-gray-800"
+                >
+                  🏠 Go to Lobby
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -765,11 +1046,16 @@ export const MultiplayerTugOfWarV2 = () => {
               <button
                 onClick={() => {
                   setShowEliminationModal(false);
-                  reset();
                 }}
                 className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
               >
                 🔄 Try Again
+              </button>
+              <button
+                onClick={handleGoToLobby}
+                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
+              >
+                🏠 Go to Lobby
               </button>
             </div>
           </div>
