@@ -13,6 +13,7 @@ import { preloadAllModels } from './utils/modelPreloader';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Celebration } from './components/Celebration';
+import { Bot } from './components/Bot';
 import { FIELD_CONFIG } from './config/field';
 import { GameLevel } from './hooks/useGameLevels';
 
@@ -310,6 +311,20 @@ export const RedLightGreenLight = ({ onLevelChange, onNextLevel }: RedLightGreen
           onRefReady={(ref) => { (playerRef as any).current = ref.current; }}
           onMovementChange={setIsPlayerMoving} // Pass movement state up
         />
+        {/* Bots */}
+        {Array.from({ length: 8 }).map((_, i) => {
+          // Place each bot 2 units apart along X, centered around player (x=0)
+          const baseX = -7 + i * 2; // span from -7 to +7 for 8 bots
+          return (
+            <Bot
+              key={`bot-${i}`}
+              lightState={lightState}
+              gameState={gameState}
+              name={`BOT ${i + 1}`}
+              startX={baseX}
+            />
+          );
+        })}
         {/* Soldiers flanking the doll, facing players */}
         <Doll lightState={lightState} gameState={gameState} modelPath={MODEL_CONFIG.doll.path} />
         <Soldier position={FIELD_CONFIG.SOLDIER_POSITIONS[0]} rotation={[0, Math.PI, 0]} />

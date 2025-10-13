@@ -34,6 +34,7 @@ export const usePlayerMovement = (
   // Use centralized field configuration
   const MOVE_SPEED = FIELD_CONFIG.UNITS_PER_SEC;
   const FRICTION = 0.9;
+  const DEADZONE = 0.02;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -106,6 +107,10 @@ export const usePlayerMovement = (
       if (isMoving) {
         console.log('Moving during green light:', playerGroup.position.z);
       }
+    } else {
+      // Not green: actively kill tiny residual velocity to avoid sliding
+      if (Math.abs(velocity.z) < DEADZONE) velocity.z = 0;
+      if (Math.abs(velocity.x) < DEADZONE) velocity.x = 0;
     }
 
     // Apply friction
@@ -113,7 +118,9 @@ export const usePlayerMovement = (
 
     // Update position (XZ only). Keep Y fixed to stand on ground.
     playerGroup.position.x += velocity.x;
-    playerGroup.position.z += velocity.z;
+    if (lightState === 'green') {
+      playerGroup.position.z += velocity.z;
+    }
     playerGroup.position.y = 0;
 
     // Orient player to face movement direction if moving

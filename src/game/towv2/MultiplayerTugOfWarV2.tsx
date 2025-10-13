@@ -448,7 +448,7 @@ export const MultiplayerTugOfWarV2 = () => {
     window.addEventListener('keyup', onKeyUp);
     
     return () => { 
-      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keydown', onKeyDown); 
       window.removeEventListener('keyup', onKeyUp);
     };
   }, []);
@@ -1034,7 +1034,7 @@ export const MultiplayerTugOfWarV2 = () => {
                   </span>
                   <br />
                   <span className="text-xl text-gray-800">WINS!</span>
-                </h2>
+              </h2>
                 <p className="text-lg text-gray-800 font-bold mb-4">🎊 Congratulations! 🎊</p>
             </div>
               

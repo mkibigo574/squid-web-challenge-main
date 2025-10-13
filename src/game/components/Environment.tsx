@@ -1,44 +1,27 @@
-import { useRef } from 'react';
+import { useRef, Suspense } from 'react';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { MODEL_CONFIG } from '../config/models';
 import { FIELD_CONFIG } from '../config/field';
 
-// Tree component using the 3D model with error handling
+// Tree component using the 3D model; rely on Suspense for loading states
 const TreeModel = ({ position, rotation = [0, 0, 0], scale = [1, 1, 1] }: { 
   position: [number, number, number], 
   rotation?: [number, number, number], 
   scale?: [number, number, number] 
 }) => {
-  try {
-    const { scene } = useGLTF(MODEL_CONFIG.tree.path);
-    const clonedScene = useRef<THREE.Group>();
+  const { scene } = useGLTF(MODEL_CONFIG.tree.path);
+  const clonedScene = useRef<THREE.Group>();
 
-    if (!clonedScene.current) {
-      clonedScene.current = scene.clone();
-    }
-
-    return (
-      <group position={position} rotation={rotation} scale={scale}>
-        <primitive object={clonedScene.current} />
-      </group>
-    );
-  } catch (error) {
-    console.warn('Failed to load tree model, using fallback:', error);
-    // Fallback to simple geometry
-    return (
-      <group position={position} rotation={rotation} scale={scale}>
-        <mesh>
-          <cylinderGeometry args={[2, 4, 8]} />
-          <meshLambertMaterial color="#228B22" />
-        </mesh>
-        <mesh position={[0, 4, 0]}>
-          <sphereGeometry args={[3]} />
-          <meshLambertMaterial color="#32CD32" />
-        </mesh>
-      </group>
-    );
+  if (!clonedScene.current) {
+    clonedScene.current = scene.clone();
   }
+
+  return (
+    <group position={position} rotation={rotation} scale={scale}>
+      <primitive object={clonedScene.current} />
+    </group>
+  );
 };
 
 // Preload the tree model with error handling
@@ -99,11 +82,13 @@ export const Environment = () => {
       </mesh>
 
       {/* Tree behind the doll */}
-      <TreeModel 
-        position={FIELD_CONFIG.TREE_POSITION}
-        rotation={[0, 0, 0]}
-        scale={[20, 50, -2]}
-      />
+      <Suspense fallback={null}>
+        <TreeModel 
+          position={FIELD_CONFIG.TREE_POSITION}
+          rotation={[0, 0, 0]}
+          scale={[20, 50, -2]}
+        />
+      </Suspense>
 
       {/* Background gradient */}
       <mesh position={FIELD_CONFIG.BACKGROUND_POSITION}>
