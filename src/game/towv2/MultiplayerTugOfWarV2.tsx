@@ -7,7 +7,7 @@ import { useTowV2 } from './useTowV2';
 
 // Fresh minimal Tug of War V2 scene scaffold
 // World height refs
-const PLATFORM_TOP_Y = 9.8; // lowered platforms by -2 → new top
+const PLATFORM_TOP_Y = 7.2; // platforms positioned on top of supporting poles
 const PLAYER_BASE_Y = PLATFORM_TOP_Y - 0.2; // feet center at 0.2 → base so soles rest on top
 const HAND_LOCAL_Y = 1.2; // hands relative to player group
 const BROWN_FLOOR_TOP_Y = -6 + 0.4; // central brown deck positioned at -6 with thickness 0.8
@@ -671,19 +671,19 @@ export const MultiplayerTugOfWarV2 = () => {
                 </div>
               </div>
               
-              {selectedRedPlayers.length > 0 && (
+            {selectedRedPlayers.length > 0 && (
                 <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded p-2 border border-yellow-300">
                   <div className="text-center font-bold text-yellow-800 text-xs mb-1">Round {currentRound} Players</div>
                   <div className="grid grid-cols-2 gap-1 text-xs">
                     <div className="bg-red-100 rounded p-1">
                       <div className="font-semibold text-red-700">Red: {selectedRedPlayers.map(p => p.playerNumber).join(', ')}</div>
-                    </div>
+                </div>
                     <div className="bg-green-100 rounded p-1">
                       <div className="font-semibold text-green-700">Blue: {selectedBluePlayers.map(p => p.playerNumber).join(', ')}</div>
                     </div>
-                  </div>
                 </div>
-              )}
+              </div>
+            )}
             </div>
           </div>
         </div>
@@ -707,13 +707,13 @@ export const MultiplayerTugOfWarV2 = () => {
             </div>
             
             <div className="grid grid-cols-3 gap-1">
-              {redTeamPlayers.map((player) => (
-                <div
-                  key={player.id}
+            {redTeamPlayers.map((player) => (
+              <div
+                key={player.id}
                   className={`p-1 rounded text-center font-bold text-xs transform transition-all duration-300 hover:scale-110 ${
-                    player.isEliminated 
+                  player.isEliminated 
                       ? 'bg-red-200 text-red-500 line-through opacity-60' 
-                      : selectedRedPlayers.some(p => p.id === player.id)
+                    : selectedRedPlayers.some(p => p.id === player.id)
                       ? 'bg-gradient-to-br from-red-600 to-red-700 text-white shadow-lg animate-pulse'
                       : 'bg-gradient-to-br from-red-100 to-red-200 text-red-700 hover:from-red-200 hover:to-red-300'
                   }`}
@@ -723,8 +723,8 @@ export const MultiplayerTugOfWarV2 = () => {
                   {selectedRedPlayers.some(p => p.id === player.id) && (
                     <div className="text-xs mt-0.5">⭐</div>
                   )}
-                </div>
-              ))}
+              </div>
+            ))}
             </div>
             
             {/* Team status indicator */}
@@ -755,13 +755,13 @@ export const MultiplayerTugOfWarV2 = () => {
             </div>
             
             <div className="grid grid-cols-3 gap-1">
-              {blueTeamPlayers.map((player) => (
-                <div
-                  key={player.id}
+            {blueTeamPlayers.map((player) => (
+              <div
+                key={player.id}
                   className={`p-1 rounded text-center font-bold text-xs transform transition-all duration-300 hover:scale-110 ${
-                    player.isEliminated 
+                  player.isEliminated 
                       ? 'bg-green-200 text-green-500 line-through opacity-60' 
-                      : selectedBluePlayers.some(p => p.id === player.id)
+                    : selectedBluePlayers.some(p => p.id === player.id)
                       ? 'bg-gradient-to-br from-green-600 to-green-700 text-white shadow-lg animate-pulse'
                       : 'bg-gradient-to-br from-green-100 to-green-200 text-green-700 hover:from-green-200 hover:to-green-300'
                   }`}
@@ -771,8 +771,8 @@ export const MultiplayerTugOfWarV2 = () => {
                   {selectedBluePlayers.some(p => p.id === player.id) && (
                     <div className="text-xs mt-0.5">⭐</div>
                   )}
-                </div>
-              ))}
+              </div>
+            ))}
             </div>
             
             {/* Team status indicator */}
@@ -1024,7 +1024,7 @@ export const MultiplayerTugOfWarV2 = () => {
                   className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-110 shadow-lg border-2 border-gray-800"
                 >
                   🏠 Go to Lobby
-                </button>
+              </button>
               </div>
             </div>
           </div>

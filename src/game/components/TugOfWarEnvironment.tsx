@@ -52,11 +52,11 @@ export const TugOfWarEnvironment = () => {
 
       {/* Side platforms - elevated left/right pads with simple scaffold accents (span to platform ends) */}
       <group position={[0, 8, 0]}>
-        <mesh position={[-13.5, 1.2, 0]} castShadow receiveShadow>
+        <mesh position={[-13.5, -1.4, 0]} castShadow receiveShadow>
           <boxGeometry args={[20, 1.2, 6]} />
           <meshStandardMaterial color="#5b3aa5" />
         </mesh>
-        <mesh position={[13.5, 1.2, 0]} castShadow receiveShadow>
+        <mesh position={[13.5, -1.4, 0]} castShadow receiveShadow>
           <boxGeometry args={[20, 1.2, 6]} />
           <meshStandardMaterial color="#5b3aa5" />
         </mesh>
@@ -78,6 +78,76 @@ export const TugOfWarEnvironment = () => {
               <boxGeometry args={[0.2, 14, 0.2]} />
               <meshStandardMaterial color="#8B4513" />
         </mesh>
+            
+            {/* Complete brick wall with 15 unit height */}
+            {Array.from({ length: 28 }, (_, layer) => {
+              // Height from brown surface (Y = -16) to Y = -1
+              // Total height = 15 units, divided into 28 layers = 0.54 units per layer
+              // Start exactly at brown surface level
+              const layerHeight = -16 + (layer * 0.54);
+              const isOffsetLayer = layer % 2 === 1; // Offset every other layer
+              
+              return Array.from({ length: 25 }, (_, i) => {
+                const brickX = -9.8 + (i * 0.8); // 25 bricks with 0.8 unit spacing
+                const brickY = layerHeight;
+                const brickZ = 0;
+                const finalX = isOffsetLayer ? brickX + 0.4 : brickX; // Half-brick offset
+                
+                // Only place brick if it's within the pole gap
+                if (finalX >= -9.8 && finalX <= 9.8) {
+                  return (
+                    <mesh key={`brick-${layer}-${i}`} position={[finalX, brickY, brickZ]} castShadow receiveShadow>
+                      <boxGeometry args={[0.7, 0.3, 0.2]} />
+                      <meshStandardMaterial 
+                        color={
+                          (layer + i) % 6 === 0 ? "#8B4513" : 
+                          (layer + i) % 6 === 1 ? "#A0522D" : 
+                          (layer + i) % 6 === 2 ? "#CD853F" : 
+                          (layer + i) % 6 === 3 ? "#D2691E" : 
+                          (layer + i) % 6 === 4 ? "#B8860B" : "#DEB887"
+                        }
+                        metalness={0.1}
+                        roughness={0.8}
+                      />
+                    </mesh>
+                  );
+                }
+                return null;
+              }).filter(Boolean);
+            }).flat()}
+            
+            {/* Additional dense brick layers for complete coverage */}
+            {Array.from({ length: 37 }, (_, layer) => {
+              // Dense layers with different spacing, starting from brown surface
+              const layerHeight = -16 + (layer * 0.4); // 37 layers with 0.4 unit spacing
+              const isOffsetLayer = layer % 2 === 0; // Opposite offset pattern
+              
+              return Array.from({ length: 30 }, (_, i) => {
+                const brickX = -9.8 + (i * 0.65); // 30 bricks with 0.65 unit spacing
+                const brickY = layerHeight;
+                const brickZ = 0;
+                const finalX = isOffsetLayer ? brickX + 0.325 : brickX; // Quarter-brick offset
+                
+                // Only place brick if it's within the pole gap
+                if (finalX >= -9.8 && finalX <= 9.8) {
+                  return (
+                    <mesh key={`dense-${layer}-${i}`} position={[finalX, brickY, brickZ]} castShadow receiveShadow>
+                      <boxGeometry args={[0.6, 0.3, 0.2]} />
+                      <meshStandardMaterial 
+                        color={
+                          (layer + i) % 4 === 0 ? "#8B4513" : 
+                          (layer + i) % 4 === 1 ? "#A0522D" : 
+                          (layer + i) % 4 === 2 ? "#CD853F" : "#D2691E"
+                        }
+                        metalness={0.1}
+                        roughness={0.8}
+                      />
+                    </mesh>
+                  );
+                }
+                return null;
+              }).filter(Boolean);
+            }).flat()}
           </group>
         ))}
       </group>
