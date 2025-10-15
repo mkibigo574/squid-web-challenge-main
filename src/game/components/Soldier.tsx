@@ -9,25 +9,6 @@ interface SoldierProps {
   rotation?: [number, number, number];
 }
 
-const GLBSoldier = ({ path }: { path: string }) => {
-  const { scene } = useGLTF(path);
-
-  // Clone the scene so each instance has its own graph
-  const cloned = useMemo(() => SkeletonUtils.clone(scene), [scene]);
-
-  // Enable shadows and ground the clone
-  useMemo(() => {
-    cloned.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-      }
-    });
-    const box = new THREE.Box3().setFromObject(cloned);
-    cloned.position.y -= box.min.y || 0;
-  }, [cloned]);
-
-
 const GLBSoldier = ({ supabasePath, localPath }: { supabasePath: string; localPath: string }) => {
   let scene, animations;
   let source = 'none';

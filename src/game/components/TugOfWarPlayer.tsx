@@ -517,6 +517,7 @@ export const TugOfWarPlayer = ({
           <boxGeometry args={[0.6, 1.2, 0.6]} />
           <meshStandardMaterial color="#4ECDC4" />
         </mesh>
+      )}
 
       {/* Show player only if not eliminated */}
       {gameState !== 'eliminated' && (
@@ -559,12 +560,6 @@ export const TugOfWarPlayer = ({
         </group>
       )}
       
-      {gameState === 'eliminated' && (
-        <mesh position={[0, 0.3, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <boxGeometry args={[0.6, 1.2, 0.6]} />
-          <meshStandardMaterial color="#FF6B6B" />
-        </mesh>
-
       {/* Show elimination effect for eliminated players */}
       {gameState === 'eliminated' && (
         <group>
