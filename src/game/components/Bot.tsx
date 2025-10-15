@@ -60,7 +60,6 @@ function EliminationEffectBot() {
 }
 
 const BotGLB = ({ modelPath, state }: { modelPath: string; state: string }) => {
-  const { scene, animations } = useGLTF(modelPath);
   let scene, animations;
   try {
     const gltf = useGLTF(modelPath);
