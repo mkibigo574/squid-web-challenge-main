@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Model Test</title>
+</head>
+<body>
+    <h1>Testing Model Loading</h1>
+    <div id="output"></div>
+    
+    <script>
+        // Test local model loading
+        const modelPath = '/models/Meshy_Merged_Animations (Walk, Run, Fall & Happy).glb';
+        
+        fetch(modelPath, { method: 'HEAD' })
+            .then(response => {
+                const output = document.getElementById('output');
+                if (response.ok) {
+                    output.innerHTML = `<p style="color: green;">✅ Model found: ${modelPath}</p>`;
+                } else {
+                    output.innerHTML = `<p style="color: red;">❌ Model not found: ${modelPath} (Status: ${response.status})</p>`;
+                }
+            })
+            .catch(error => {
+                const output = document.getElementById('output');
+                output.innerHTML = `<p style="color: red;">❌ Error loading model: ${error.message}</p>`;
+            });
+    </script>
+</body>
+</html>

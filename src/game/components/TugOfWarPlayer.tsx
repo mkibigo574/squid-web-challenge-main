@@ -1,5 +1,11 @@
+<<<<<<< HEAD
 import { useRef, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
+=======
+import { useRef, useEffect, useState, Suspense } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { useGLTF } from '@react-three/drei';
+>>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
 import * as THREE from 'three';
 
 interface TugOfWarPlayerProps {
@@ -17,6 +23,210 @@ interface TugOfWarPlayerProps {
   initialPosition?: number;
 }
 
+<<<<<<< HEAD
+=======
+// Fallback primitive player component
+const PrimitivePlayer = () => (
+  <group>
+    {/* Body */}
+    <mesh position={[0, 1, 0]} castShadow>
+      <cylinderGeometry args={[0.3, 0.4, 2]} />
+      <meshLambertMaterial color="#4a90e2" />
+    </mesh>
+    
+    {/* Head */}
+    <mesh position={[0, 2.2, 0]} castShadow>
+      <sphereGeometry args={[0.4]} />
+      <meshLambertMaterial color="#ffdbac" />
+    </mesh>
+    
+    {/* Arms */}
+    <mesh position={[-0.6, 1.5, 0]} castShadow>
+      <cylinderGeometry args={[0.1, 0.1, 1.2]} />
+      <meshLambertMaterial color="#ffdbac" />
+    </mesh>
+    <mesh position={[0.6, 1.5, 0]} castShadow>
+      <cylinderGeometry args={[0.1, 0.1, 1.2]} />
+      <meshLambertMaterial color="#ffdbac" />
+    </mesh>
+    
+    {/* Legs */}
+    <mesh position={[-0.2, 0.2, 0]} castShadow>
+      <cylinderGeometry args={[0.15, 0.15, 1]} />
+      <meshLambertMaterial color="#2c3e50" />
+    </mesh>
+    <mesh position={[0.2, 0.2, 0]} castShadow>
+      <cylinderGeometry args={[0.15, 0.15, 1]} />
+      <meshLambertMaterial color="#2c3e50" />
+    </mesh>
+  </group>
+);
+
+const PlayerLoading = () => (
+  <group>
+    <mesh position={[0, 1, 0]}>
+      <cylinderGeometry args={[0.3, 0.4, 2]} />
+      <meshBasicMaterial color="#666" wireframe />
+    </mesh>
+    <mesh position={[0, 2.2, 0]}>
+      <sphereGeometry args={[0.4]} />
+      <meshBasicMaterial color="#666" wireframe />
+    </mesh>
+  </group>
+);
+
+// GLB Player component (reused from Player.tsx)
+const GLBPlayer = ({ modelPath, state }: { modelPath: string; state: string }) => {
+  let scene, animations;
+  try {
+    const gltf = useGLTF(modelPath);
+    scene = gltf.scene;
+    animations = gltf.animations;
+  } catch (error) {
+    console.warn('Failed to load player model, using fallback:', error);
+    scene = null;
+    animations = [];
+  }
+  
+  const mixerRef = useRef<THREE.AnimationMixer>();
+  const actionRef = useRef<THREE.AnimationAction | null>(null);
+
+  useEffect(() => {
+    if (!scene) return;
+    // Enable shadows on all meshes
+    scene.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+
+    // Setup animation mixer
+    if (animations && animations.length > 0) {
+      mixerRef.current = new THREE.AnimationMixer(scene);
+    }
+  }, [scene, animations]);
+
+  useFrame((_, delta) => {
+    if (mixerRef.current) mixerRef.current.update(delta);
+  });
+
+  useEffect(() => {
+    return () => {
+      try {
+        if (actionRef.current) actionRef.current.stop();
+        mixerRef.current?.stopAllAction();
+      } catch {}
+    };
+  }, []);
+
+  // Switch clips based on state with explicit name matching
+  useEffect(() => {
+    const mixer = mixerRef.current;
+    if (!mixer || !animations) return;
+
+    console.log('GLBPlayer state change:', state, 'Available animations:', animations.map(a => a.name));
+
+    // Helper to find the best matching clip by names
+    const findByNames = (names: string[]): THREE.AnimationClip | undefined => {
+      for (const name of names) {
+        const clip = animations.find(a => new RegExp(name, 'i').test(a.name));
+        if (clip) {
+          console.log(`Found animation: ${clip.name} for pattern: ${name}`);
+          return clip;
+        }
+      }
+      console.log(`No animation found for patterns: ${names.join(', ')}`);
+      return undefined;
+    };
+
+    // Stop any previous action
+    if (actionRef.current) {
+      actionRef.current.fadeOut(0.15);
+      actionRef.current.stop();
+      actionRef.current = null;
+    }
+
+    if (state === 'idle') {
+      // Show bind/rest pose by not playing any clip
+      mixer.stopAllAction();
+      return;
+    }
+
+    let clip: THREE.AnimationClip | undefined;
+    if (state === 'pulling') {
+      // For tug of war, use a more aggressive pulling animation
+      clip = findByNames(['run', 'walk', 'running', 'walking', 'pull', 'pulling']);
+    } else if (state === 'run') {
+      clip = findByNames(['run', 'walk', 'running', 'walking']);
+    } else if (state === 'fall') {
+      clip = findByNames(['fall', 'death', 'die', 'falling', 'eliminated', 'elimination']);
+    } else if (state === 'happy') {
+      clip = findByNames(['happy', 'victory', 'win', 'celebration', 'winning']);
+    }
+
+    if (!clip) {
+      console.log(`No animation clip found for state: ${state}`);
+      return;
+    }
+
+    const action = mixer.clipAction(clip);
+    if (state === 'fall') {
+      action.setLoop(THREE.LoopOnce, 1);
+      action.clampWhenFinished = true;
+      // Make fall animation more visible
+      action.timeScale = 0.8; // Slightly slower but not too slow
+      console.log(`Fall animation duration: ${clip.duration}s, timeScale: 0.8`);
+    } else {
+      action.setLoop(THREE.LoopRepeat, Infinity);
+    }
+    action.reset().fadeIn(0.3).play(); // Slightly longer fade for smoother transition
+    actionRef.current = action;
+    console.log(`Playing animation: ${clip.name} for state: ${state}`);
+  }, [state, animations]);
+
+  if (!scene) {
+    // Fallback player using primitive shapes
+    return (
+      <group>
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[0.8, 1.8, 0.4]} />
+          <meshStandardMaterial color="blue" />
+        </mesh>
+        <mesh position={[0, 1.1, 0]} castShadow receiveShadow>
+          <sphereGeometry args={[0.3]} />
+          <meshStandardMaterial color="pink" />
+        </mesh>
+        <mesh position={[-0.3, 0.5, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.2, 0.8, 0.2]} />
+          <meshStandardMaterial color="blue" />
+        </mesh>
+        <mesh position={[0.3, 0.5, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.2, 0.8, 0.2]} />
+          <meshStandardMaterial color="blue" />
+        </mesh>
+        <mesh position={[-0.2, -0.4, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.2, 0.6, 0.2]} />
+          <meshStandardMaterial color="blue" />
+        </mesh>
+        <mesh position={[0.2, -0.4, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.2, 0.6, 0.2]} />
+          <meshStandardMaterial color="blue" />
+        </mesh>
+      </group>
+    );
+  }
+
+  return (
+    <primitive 
+      object={scene} 
+      scale={[1, 1, 1]} 
+      position={[0, 0, 0]}
+    />
+  );
+};
+
+>>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
 export const TugOfWarPlayer = ({ 
   gameState, 
   onPositionUpdate, 
@@ -32,6 +242,7 @@ export const TugOfWarPlayer = ({
   initialPosition
 }: TugOfWarPlayerProps) => {
   const groupRef = useRef<THREE.Group>(null);
+<<<<<<< HEAD
   const [model, setModel] = useState<THREE.Group | null>(null);
   const [mixer, setMixer] = useState<THREE.AnimationMixer | null>(null);
   const [currentAction, setCurrentAction] = useState<THREE.AnimationAction | null>(null);
@@ -105,6 +316,97 @@ export const TugOfWarPlayer = ({
       return () => clearInterval(interval);
     }
   }, [mixer, model, gameState, isPulling]);
+=======
+  const [velocity, setVelocity] = useState(0);
+  const [position, setPosition] = useState(initialPosition !== undefined ? initialPosition : (teamSide === 'left' ? -6 : 6));
+  const [usePrimitive, setUsePrimitive] = useState(false);
+  const [assetChecked, setAssetChecked] = useState(false);
+
+  // Determine animation state based on game state and pulling
+  const getAnimationState = (): string => {
+    if (gameState === 'eliminated') {
+      return 'fall';
+    } else if (gameState === 'won') {
+      return 'happy';
+    } else if (gameState === 'playing' && isPulling) {
+      return 'pulling';
+    } else {
+      return 'idle'; // Standing animation for waiting, countdown, and not pulling
+    }
+  };
+
+  // Debug model path
+  useEffect(() => {
+    console.log('TugOfWarPlayer model path:', modelPath);
+    console.log('TugOfWarPlayer usePrimitive:', usePrimitive);
+    console.log('TugOfWarPlayer assetChecked:', assetChecked);
+  }, [modelPath, usePrimitive, assetChecked]);
+
+  // Proactively verify model asset availability to avoid canvas crash
+  useEffect(() => {
+    let cancelled = false;
+    if (!modelPath) {
+      setUsePrimitive(true);
+      setAssetChecked(true);
+      return;
+    }
+    
+    // Check if this is a local path (starts with /) or a full URL
+    const isLocalPath = modelPath.startsWith('/');
+    
+    if (isLocalPath) {
+      // For local paths, check if the file exists
+      fetch(modelPath, { method: 'HEAD' })
+        .then((res) => {
+          if (cancelled) return;
+          if (!res.ok) {
+            console.warn(`Local model not found: ${modelPath}, using primitive fallback`);
+            setUsePrimitive(true);
+          }
+          setAssetChecked(true);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          console.warn(`Failed to load local model: ${modelPath}, using primitive fallback`);
+          setUsePrimitive(true);
+          setAssetChecked(true);
+        });
+    } else {
+      // For Supabase URLs, try to load and fallback to local if needed
+      fetch(modelPath, { method: 'HEAD' })
+        .then((res) => {
+          if (cancelled) return;
+          if (!res.ok) {
+            console.warn(`Supabase model not available: ${modelPath}, using primitive fallback`);
+            setUsePrimitive(true);
+          }
+          setAssetChecked(true);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          console.warn(`Failed to load Supabase model: ${modelPath}, using primitive fallback`);
+          setUsePrimitive(true);
+          setAssetChecked(true);
+        });
+    }
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [modelPath]);
+
+  // If model path is missing, use primitive fallback
+  useEffect(() => {
+    if (!modelPath) setUsePrimitive(true);
+  }, [modelPath]);
+
+  // Notify parent when ref is ready
+  useEffect(() => {
+    if (onRefReady) {
+      onRefReady(groupRef);
+    }
+  }, [onRefReady]);
+>>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
 
   // Physics-based movement system
   useFrame((state, delta) => {
@@ -219,6 +521,7 @@ export const TugOfWarPlayer = ({
 
   return (
     <group ref={groupRef}>
+<<<<<<< HEAD
       {model ? (
         <primitive object={model} />
       ) : (
@@ -227,6 +530,20 @@ export const TugOfWarPlayer = ({
           <boxGeometry args={[0.6, 1.2, 0.6]} />
           <meshStandardMaterial color="#4ECDC4" />
         </mesh>
+=======
+      {/* Show player only if not eliminated */}
+      {gameState !== 'eliminated' && (
+        <Suspense fallback={<PlayerLoading />}>
+          {modelPath && !usePrimitive && assetChecked ? (
+            <GLBPlayer
+              modelPath={modelPath}
+              state={getAnimationState()}
+            />
+          ) : (
+            <PrimitivePlayer />
+          )}
+        </Suspense>
+>>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
       )}
       
       {/* Pulling indicator */}
@@ -256,11 +573,22 @@ export const TugOfWarPlayer = ({
         </group>
       )}
       
+<<<<<<< HEAD
       {gameState === 'eliminated' && (
         <mesh position={[0, 0.3, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <boxGeometry args={[0.6, 1.2, 0.6]} />
           <meshStandardMaterial color="#FF6B6B" />
         </mesh>
+=======
+      {/* Show elimination effect for eliminated players */}
+      {gameState === 'eliminated' && (
+        <group>
+          <mesh position={[0, 0.3, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <boxGeometry args={[0.6, 1.2, 0.6]} />
+            <meshStandardMaterial color="#FF6B6B" />
+          </mesh>
+        </group>
+>>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
       )}
     </group>
   );

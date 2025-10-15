@@ -154,7 +154,21 @@ const EliminationEffect = () => {
 
 // GLB Player component (no state updates during render/Suspense)
 const GLBPlayer = ({ modelPath, state }: { modelPath: string; state: string }) => {
+<<<<<<< HEAD
   const { scene, animations } = useGLTF(modelPath);
+=======
+  let scene, animations;
+  try {
+    const gltf = useGLTF(modelPath);
+    scene = gltf.scene;
+    animations = gltf.animations;
+  } catch (error) {
+    console.warn('Failed to load player model, using fallback:', error);
+    scene = null;
+    animations = [];
+  }
+  
+>>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
   const mixerRef = useRef<THREE.AnimationMixer>();
   const actionRef = useRef<THREE.AnimationAction | null>(null);
 
@@ -249,6 +263,41 @@ const GLBPlayer = ({ modelPath, state }: { modelPath: string; state: string }) =
     console.log(`Playing animation: ${clip.name} for state: ${state}`);
   }, [state, animations]);
 
+<<<<<<< HEAD
+=======
+  if (!scene) {
+    // Fallback player using primitive shapes
+    return (
+      <group>
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[0.8, 1.8, 0.4]} />
+          <meshStandardMaterial color="blue" />
+        </mesh>
+        <mesh position={[0, 1.1, 0]} castShadow receiveShadow>
+          <sphereGeometry args={[0.3]} />
+          <meshStandardMaterial color="pink" />
+        </mesh>
+        <mesh position={[-0.3, 0.5, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.2, 0.8, 0.2]} />
+          <meshStandardMaterial color="blue" />
+        </mesh>
+        <mesh position={[0.3, 0.5, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.2, 0.8, 0.2]} />
+          <meshStandardMaterial color="blue" />
+        </mesh>
+        <mesh position={[-0.2, -0.4, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.2, 0.6, 0.2]} />
+          <meshStandardMaterial color="blue" />
+        </mesh>
+        <mesh position={[0.2, -0.4, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.2, 0.6, 0.2]} />
+          <meshStandardMaterial color="blue" />
+        </mesh>
+      </group>
+    );
+  }
+
+>>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
   return (
     <primitive 
       object={scene} 

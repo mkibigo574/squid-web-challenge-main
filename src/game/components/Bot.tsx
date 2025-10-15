@@ -60,7 +60,37 @@ function EliminationEffectBot() {
 }
 
 const BotGLB = ({ modelPath, state }: { modelPath: string; state: string }) => {
+<<<<<<< HEAD
   const { scene, animations } = useGLTF(modelPath);
+=======
+  let scene, animations;
+  try {
+    const gltf = useGLTF(modelPath);
+    scene = gltf.scene;
+    animations = gltf.animations;
+  } catch (error) {
+    console.warn('Failed to load bot model, using fallback:', error);
+    scene = null;
+    animations = [];
+  }
+  
+  if (!scene) {
+    // Fallback bot using primitive shapes
+    return (
+      <group>
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[0.6, 1.5, 0.3]} />
+          <meshStandardMaterial color="red" />
+        </mesh>
+        <mesh position={[0, 0.9, 0]} castShadow receiveShadow>
+          <sphereGeometry args={[0.25]} />
+          <meshStandardMaterial color="pink" />
+        </mesh>
+      </group>
+    );
+  }
+  
+>>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
   // Clone per instance to avoid shared graph/material issues
   const cloned = useMemo(() => SkeletonUtils.clone(scene), [scene]);
   const mixer = useMemo(() => new THREE.AnimationMixer(cloned), [cloned]);

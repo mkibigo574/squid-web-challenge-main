@@ -124,4 +124,49 @@ All colors MUST be HSL.
 
 .money-rain {
   animation: moneyRain 3s linear infinite;
+<<<<<<< HEAD
+=======
+}
+
+/* Falling Debris Animation for Elimination Modal */
+@keyframes fallingDebris {
+  0% {
+    transform: translateY(-100px) rotate(0deg);
+    opacity: 1;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.falling-debris {
+  animation: fallingDebris 4s linear infinite;
+}
+
+/* Smoke Effect Animation for Elimination Modal */
+@keyframes smokeEffect {
+  0% {
+    transform: translateY(0px) scale(0.5);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateY(-20px) scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-40px) scale(1.5);
+    opacity: 0;
+  }
+}
+
+.smoke-effect {
+  animation: smokeEffect 5s ease-out infinite;
+>>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
 }

@@ -2,12 +2,35 @@ import { getSupabaseUrl } from '@/lib/supabase';
 
 // Helper function to create model config with environment-aware path selection
 const createModelConfig = (supabasePath: string, localPath: string, config: any) => {
+<<<<<<< HEAD
   // Force use of local models to avoid Supabase connection issues
   return {
     ...config,
     supabasePath: localPath, // Use local path as fallback
     localPath,
     path: localPath, // Always use local path
+=======
+  const supabaseUrl = getSupabaseUrl(supabasePath);
+  const isSupabaseConfigured = supabaseUrl && 
+    !supabaseUrl.includes('undefined') && 
+    !supabaseUrl.includes('your-supabase-url') &&
+    supabaseUrl.startsWith('http');
+  
+  const finalPath = isSupabaseConfigured ? supabaseUrl : localPath;
+  
+  console.log(`Model config for ${supabasePath}:`, {
+    supabaseUrl,
+    isSupabaseConfigured,
+    localPath,
+    finalPath
+  });
+  
+  return {
+    ...config,
+    supabasePath: supabaseUrl,
+    localPath,
+    path: finalPath, // Use local path if Supabase not configured
+>>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
     fallback: 'primitive'
   };
 };

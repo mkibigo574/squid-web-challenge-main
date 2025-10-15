@@ -136,6 +136,7 @@ export const getBestModelPath = (supabaseUrl: string, localPath: string): string
   return isProduction ? supabaseUrl : localPath;
 };
 
+<<<<<<< HEAD
 // Get the best model path with fallback to Supabase URL in production
 export const getModelPath = (supabaseUrl: string, localPath: string): string => {
   // Always prefer Supabase URL in production
@@ -145,10 +146,30 @@ export const getModelPath = (supabaseUrl: string, localPath: string): string => 
   }
   
   // In development, check if we have a resolved path
+=======
+// Get the best model path with fallback to local path when Supabase is not configured
+export const getModelPath = (supabaseUrl: string, localPath: string): string => {
+  // Check if Supabase is properly configured
+  const isSupabaseConfigured = supabaseUrl && 
+    !supabaseUrl.includes('undefined') && 
+    !supabaseUrl.includes('your-supabase-url') &&
+    supabaseUrl.startsWith('http');
+  
+  // If Supabase is configured, use it
+  if (isSupabaseConfigured) {
+    return supabaseUrl;
+  }
+  
+  // Check if we have a resolved path
+>>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
   if (resolvedPaths.has(localPath)) {
     return resolvedPaths.get(localPath)!;
   }
   
+<<<<<<< HEAD
   // Default to local path in development
+=======
+  // Default to local path
+>>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
   return localPath;
 };
