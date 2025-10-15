@@ -387,8 +387,6 @@ export const MultiplayerTugOfWarV2 = () => {
   const [roundCountdown, setRoundCountdown] = useState(3);
   const [forceUpdate, setForceUpdate] = useState(0);
   const [keyPressFeedback, setKeyPressFeedback] = useState(false);
-<<<<<<< HEAD
-=======
   
   // Audio management
   const audioRef = useRef<{ [key: string]: HTMLAudioElement }>({});
@@ -530,7 +528,6 @@ export const MultiplayerTugOfWarV2 = () => {
       }, stepDuration);
     }
   };
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
 
   // Handle new tournament - reset and start fresh
   const handleNewTournament = () => {
@@ -574,12 +571,10 @@ export const MultiplayerTugOfWarV2 = () => {
           // Single key press - add power once
           setPower(p => Math.min(1, p + 0.3)); // Increased power per press since no holding allowed
           
-<<<<<<< HEAD
-=======
+
           // Play tugging sound on key press
           playTuggingSound();
           
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
           // Show visual feedback for key press
           setKeyPressFeedback(true);
           setTimeout(() => setKeyPressFeedback(false), 150);
@@ -591,11 +586,9 @@ export const MultiplayerTugOfWarV2 = () => {
       // Remove key from pressed set when released
       if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
         pressedKeys.delete(e.key.toLowerCase());
-<<<<<<< HEAD
-=======
+
         // Stop tugging sound on key release
         stopTuggingSound();
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
       }
     };
     
@@ -606,11 +599,7 @@ export const MultiplayerTugOfWarV2 = () => {
       window.removeEventListener('keydown', onKeyDown); 
       window.removeEventListener('keyup', onKeyUp);
     };
-<<<<<<< HEAD
-  }, []);
-=======
   }, [phase, isMuted]);
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -655,11 +644,8 @@ export const MultiplayerTugOfWarV2 = () => {
       if (!detachedRed && rope >= 0.95) {
         console.log('Red team eliminated, selectedTeam:', selectedTeam);
         setDetachedRed(true);
-<<<<<<< HEAD
-=======
         // Play buzzer sound for elimination
         playBuzzerSound();
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
         // Show elimination modal only if current player is on red team
         if (selectedTeam === 'red') {
           console.log('Showing elimination modal for red team');
@@ -672,11 +658,8 @@ export const MultiplayerTugOfWarV2 = () => {
       if (!detachedBlue && rope <= -0.95) {
         console.log('Blue team eliminated, selectedTeam:', selectedTeam);
         setDetachedBlue(true);
-<<<<<<< HEAD
-=======
         // Play buzzer sound for elimination
         playBuzzerSound();
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
         // Show elimination modal only if current player is on blue team
         if (selectedTeam === 'blue') {
           console.log('Showing elimination modal for blue team');
@@ -702,11 +685,9 @@ export const MultiplayerTugOfWarV2 = () => {
       console.log('Results phase with winner:', winner, 'selectedTeam:', selectedTeam);
       if (selectedTeam === winner) {
         console.log('Showing win modal for winning team');
-<<<<<<< HEAD
-=======
+
         // Play win sound for winning team
         playWinSound();
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
         // Add a small delay to ensure the modal shows properly
         setTimeout(() => {
           setShowWinModal(true);
@@ -717,36 +698,6 @@ export const MultiplayerTugOfWarV2 = () => {
     }
   }, [phase, winner, selectedTeam]);
 
-<<<<<<< HEAD
-=======
-  // Play win sound when round results phase starts - for winning team
-  useEffect(() => {
-    console.log('Round results effect:', { phase, roundResults, selectedTeam });
-    if (phase === 'round-results' && roundResults.length > 0) {
-      const latestResult = roundResults[roundResults.length - 1];
-      console.log('Round results phase with winner:', latestResult.winner, 'selectedTeam:', selectedTeam);
-      // Play win sound only for the winning team
-      if (selectedTeam === latestResult.winner) {
-        console.log('Playing win sound for round winner');
-        playWinSound();
-      }
-    }
-  }, [phase, roundResults, selectedTeam]);
-
-  // Play win sound when tournament winner is determined - for winning team
-  useEffect(() => {
-    console.log('Tournament winner effect:', { phase, tournamentWinner, selectedTeam });
-    if (phase === 'tournament-winner' && tournamentWinner) {
-      console.log('Tournament winner determined:', tournamentWinner, 'selectedTeam:', selectedTeam);
-      // Play win sound only for the winning team
-      if (selectedTeam === tournamentWinner) {
-        console.log('Playing win sound for tournament winner');
-        playWinSound();
-      }
-    }
-  }, [phase, tournamentWinner, selectedTeam]);
-
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
   // Debug modal states
   useEffect(() => {
     console.log('Modal states:', { showWinModal, showEliminationModal, phase, winner, selectedTeam });
@@ -803,8 +754,6 @@ export const MultiplayerTugOfWarV2 = () => {
         {phase === 'tournament-winner' && 'Tournament Complete!'}
       </div>
       <div className="absolute top-4 left-4 flex gap-2">
-<<<<<<< HEAD
-=======
         {/* Audio Mute/Unmute Button */}
         <button
           onClick={() => setIsMuted(!isMuted)}
@@ -818,7 +767,6 @@ export const MultiplayerTugOfWarV2 = () => {
           {isMuted ? '🔇' : '🔊'}
         </button>
         
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
         {phase === 'floating' && (
           <button className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded" onClick={start}>
             {tournamentMode ? 'Start Tournament' : 'Choose your Team'}
@@ -1285,7 +1233,6 @@ export const MultiplayerTugOfWarV2 = () => {
         </div>
       )}
 
-<<<<<<< HEAD
       {/* Elimination Modal */}
       {showEliminationModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -1312,7 +1259,7 @@ export const MultiplayerTugOfWarV2 = () => {
               >
                 🏠 Go to Lobby
               </button>
-=======
+
       {/* Enhanced Elimination Modal for Losing Teams */}
       {showEliminationModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
@@ -1414,7 +1361,6 @@ export const MultiplayerTugOfWarV2 = () => {
                   🏠 Return to Lobby
                 </button>
               </div>
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
             </div>
           </div>
         </div>
@@ -1422,5 +1368,4 @@ export const MultiplayerTugOfWarV2 = () => {
     </div>
   );
 };
-
 
