@@ -3,8 +3,6 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { MODEL_CONFIG } from '../config/models';
 import { SkeletonUtils } from 'three-stdlib';
-import { SkeletonUtils } from 'three-stdlib';
-import { MODEL_CONFIG } from '../config/models';
 import { processScene } from '../utils/modelLoader';
 interface SoldierProps {
   position: [number, number, number];
@@ -80,11 +78,6 @@ const GLBSoldier = ({ supabasePath, localPath }: { supabasePath: string; localPa
 };
 
 export const Soldier = ({ position, rotation = [0, Math.PI, 0] }: SoldierProps) => {
-  const path = MODEL_CONFIG.soldier.path;
-  return (
-    <group position={position} rotation={rotation}>
-      <Suspense fallback={null}>
-        <GLBSoldier path={path} />
   const supabasePath = MODEL_CONFIG.soldier.supabasePath;
   const localPath = MODEL_CONFIG.soldier.localPath;
   return (
@@ -108,4 +101,3 @@ try {
 } catch (error) {
   console.warn('Failed to preload soldier model locally:', error);
 }
-

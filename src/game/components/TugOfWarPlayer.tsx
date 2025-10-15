@@ -1,5 +1,3 @@
-import { useRef, useEffect, useState } from 'react';
-import { useFrame } from '@react-three/fiber';
 import { useRef, useEffect, useState, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
@@ -310,8 +308,6 @@ export const TugOfWarPlayer = ({
     }
   }, [mixer, model, gameState, isPulling]);
 
-  const [velocity, setVelocity] = useState(0);
-  const [position, setPosition] = useState(initialPosition !== undefined ? initialPosition : (teamSide === 'left' ? -6 : 6));
   const [usePrimitive, setUsePrimitive] = useState(false);
   const [assetChecked, setAssetChecked] = useState(false);
 
@@ -478,11 +474,11 @@ export const TugOfWarPlayer = ({
       groupRef.current.position.y = 1.5; // Keep on elevated surface
       setVelocity(newVelocity);
       setPosition(clampedPosition);
-    }
-    
-    // Notify parent of position change
-    if (onPositionUpdate) {
-      onPositionUpdate(clampedPosition);
+      
+      // Notify parent of position change
+      if (onPositionUpdate) {
+        onPositionUpdate(clampedPosition);
+      }
     }
     
     // Notify parent of pull force

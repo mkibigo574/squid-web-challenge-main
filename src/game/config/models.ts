@@ -2,13 +2,6 @@ import { getSupabaseUrl } from '@/lib/supabase';
 
 // Helper function to create model config with environment-aware path selection
 const createModelConfig = (supabasePath: string, localPath: string, config: any) => {
-  // Force use of local models to avoid Supabase connection issues
-  return {
-    ...config,
-    supabasePath: localPath, // Use local path as fallback
-    localPath,
-    path: localPath, // Always use local path
-
   const supabaseUrl = getSupabaseUrl(supabasePath);
   const isSupabaseConfigured = supabaseUrl && 
     !supabaseUrl.includes('undefined') && 

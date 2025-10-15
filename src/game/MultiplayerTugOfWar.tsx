@@ -68,9 +68,6 @@ export const MultiplayerTugOfWar = () => {
       countdown: null // Disabled
     };
 
-    return () => {
-      // Cleanup disabled
-=======
   // Initialize audio for Tug of War
   useEffect(() => {
     audioRef.current = {

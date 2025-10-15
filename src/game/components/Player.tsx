@@ -154,8 +154,6 @@ const EliminationEffect = () => {
 
 // GLB Player component (no state updates during render/Suspense)
 const GLBPlayer = ({ modelPath, state }: { modelPath: string; state: string }) => {
-  const { scene, animations } = useGLTF(modelPath);
-
   let scene, animations;
   try {
     const gltf = useGLTF(modelPath);
@@ -311,7 +309,9 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(({
   onRefReady,
   onMovementChange, // Add this prop
   canMove = true, // Add this prop with default value
-  resetKey = 0 // Add reset key prop
+  resetKey = 0, // Add reset key prop
+  name,
+  isSelf = false
 }, ref) => {
   const eliminationAnimation = useRef(false);
   const [usePrimitive, setUsePrimitive] = useState(!modelPath);

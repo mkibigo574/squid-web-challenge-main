@@ -163,8 +163,6 @@ export const getModelPath = (supabaseUrl: string, localPath: string): string => 
     return resolvedPaths.get(localPath)!;
   }
   
-  // Default to local path in development
-
   // Default to local path
   return localPath;
 };
