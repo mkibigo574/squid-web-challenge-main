@@ -1233,33 +1233,6 @@ export const MultiplayerTugOfWarV2 = () => {
         </div>
       )}
 
-      {/* Elimination Modal */}
-      {showEliminationModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl">
-            <div className="animate-pulse">
-              <div className="text-6xl mb-4">💀</div>
-              <h2 className="text-3xl font-bold text-red-800 mb-2">
-                {selectedTeam === 'blue' ? 'Blue Team' : 'Red Team'} Eliminated!
-              </h2>
-              <p className="text-red-600 mb-6">Better luck next time!</p>
-            </div>
-            <div className="flex gap-4 justify-center">
-              <button
-                onClick={() => {
-                  setShowEliminationModal(false);
-                }}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
-              >
-                🔄 Try Again
-              </button>
-              <button
-                onClick={handleGoToLobby}
-                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105"
-              >
-                🏠 Go to Lobby
-              </button>
-
       {/* Enhanced Elimination Modal for Losing Teams */}
       {showEliminationModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">

@@ -115,18 +115,7 @@ const GLBDoll = ({ modelPath, lightState, gameState }: {
   const targetRotation = useRef(0);
   const currentRotation = useRef(0);
 
-<<<<<<< HEAD
   const { scene } = useGLTF(modelPath);
-=======
-  let scene;
-  try {
-    const gltf = useGLTF(modelPath);
-    scene = gltf.scene;
-  } catch (error) {
-    console.warn('Failed to load doll model, using fallback:', error);
-    scene = null;
-  }
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
     
   useEffect(() => {
     if (!scene) return;
@@ -179,9 +168,7 @@ const GLBDoll = ({ modelPath, lightState, gameState }: {
 
   return (
     <group ref={dollRef} position={FIELD_CONFIG.DOLL_POSITION}>
-<<<<<<< HEAD
       <primitive object={scene} />
-=======
       {scene ? (
         <primitive object={scene} />
       ) : (
@@ -201,7 +188,6 @@ const GLBDoll = ({ modelPath, lightState, gameState }: {
           </mesh>
         </group>
       )}
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
     </group>
   );
 };

@@ -4,17 +4,15 @@ import * as THREE from 'three';
 import { MODEL_CONFIG } from '../config/models';
 import { FIELD_CONFIG } from '../config/field';
 
-<<<<<<< HEAD
 // Tree component using the 3D model; rely on Suspense for loading states
-=======
+
 // Tree component using the 3D model with fallback
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
 const TreeModel = ({ position, rotation = [0, 0, 0], scale = [1, 1, 1] }: { 
   position: [number, number, number], 
   rotation?: [number, number, number], 
   scale?: [number, number, number] 
 }) => {
-<<<<<<< HEAD
+ 
   const { scene } = useGLTF(MODEL_CONFIG.tree.path);
   const clonedScene = useRef<THREE.Group>();
 
@@ -27,7 +25,7 @@ const TreeModel = ({ position, rotation = [0, 0, 0], scale = [1, 1, 1] }: {
       <primitive object={clonedScene.current} />
     </group>
   );
-=======
+
   try {
     const { scene } = useGLTF(MODEL_CONFIG.tree.path);
     const clonedScene = useRef<THREE.Group>();
@@ -57,7 +55,6 @@ const TreeModel = ({ position, rotation = [0, 0, 0], scale = [1, 1, 1] }: {
       </group>
     );
   }
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
 };
 
 // Preload the tree model with error handling

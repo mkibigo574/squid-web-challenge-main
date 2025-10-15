@@ -1,11 +1,8 @@
-<<<<<<< HEAD
 import { useRef, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-=======
 import { useRef, useEffect, useState, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
 import * as THREE from 'three';
 
 interface TugOfWarPlayerProps {
@@ -23,8 +20,6 @@ interface TugOfWarPlayerProps {
   initialPosition?: number;
 }
 
-<<<<<<< HEAD
-=======
 // Fallback primitive player component
 const PrimitivePlayer = () => (
   <group>
@@ -226,7 +221,6 @@ const GLBPlayer = ({ modelPath, state }: { modelPath: string; state: string }) =
   );
 };
 
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
 export const TugOfWarPlayer = ({ 
   gameState, 
   onPositionUpdate, 
@@ -242,7 +236,6 @@ export const TugOfWarPlayer = ({
   initialPosition
 }: TugOfWarPlayerProps) => {
   const groupRef = useRef<THREE.Group>(null);
-<<<<<<< HEAD
   const [model, setModel] = useState<THREE.Group | null>(null);
   const [mixer, setMixer] = useState<THREE.AnimationMixer | null>(null);
   const [currentAction, setCurrentAction] = useState<THREE.AnimationAction | null>(null);
@@ -316,7 +309,7 @@ export const TugOfWarPlayer = ({
       return () => clearInterval(interval);
     }
   }, [mixer, model, gameState, isPulling]);
-=======
+
   const [velocity, setVelocity] = useState(0);
   const [position, setPosition] = useState(initialPosition !== undefined ? initialPosition : (teamSide === 'left' ? -6 : 6));
   const [usePrimitive, setUsePrimitive] = useState(false);
@@ -406,7 +399,6 @@ export const TugOfWarPlayer = ({
       onRefReady(groupRef);
     }
   }, [onRefReady]);
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
 
   // Physics-based movement system
   useFrame((state, delta) => {
@@ -521,7 +513,6 @@ export const TugOfWarPlayer = ({
 
   return (
     <group ref={groupRef}>
-<<<<<<< HEAD
       {model ? (
         <primitive object={model} />
       ) : (
@@ -530,7 +521,7 @@ export const TugOfWarPlayer = ({
           <boxGeometry args={[0.6, 1.2, 0.6]} />
           <meshStandardMaterial color="#4ECDC4" />
         </mesh>
-=======
+
       {/* Show player only if not eliminated */}
       {gameState !== 'eliminated' && (
         <Suspense fallback={<PlayerLoading />}>
@@ -543,7 +534,6 @@ export const TugOfWarPlayer = ({
             <PrimitivePlayer />
           )}
         </Suspense>
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
       )}
       
       {/* Pulling indicator */}
@@ -573,13 +563,12 @@ export const TugOfWarPlayer = ({
         </group>
       )}
       
-<<<<<<< HEAD
       {gameState === 'eliminated' && (
         <mesh position={[0, 0.3, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <boxGeometry args={[0.6, 1.2, 0.6]} />
           <meshStandardMaterial color="#FF6B6B" />
         </mesh>
-=======
+
       {/* Show elimination effect for eliminated players */}
       {gameState === 'eliminated' && (
         <group>
@@ -588,7 +577,6 @@ export const TugOfWarPlayer = ({
             <meshStandardMaterial color="#FF6B6B" />
           </mesh>
         </group>
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
       )}
     </group>
   );

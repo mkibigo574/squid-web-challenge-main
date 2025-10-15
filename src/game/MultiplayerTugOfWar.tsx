@@ -58,7 +58,6 @@ export const MultiplayerTugOfWar = () => {
     loadModels();
   }, []);
 
-<<<<<<< HEAD
   // Initialize audio - DISABLED for Tug of War until proper sounds are created
   useEffect(() => {
     // Audio disabled for Tug of War game
@@ -102,11 +101,9 @@ export const MultiplayerTugOfWar = () => {
         event.stopPropagation();
         pullRope();
         setIsPlayerPulling(true);
-<<<<<<< HEAD
-=======
+ 
         // Play tugging sound on key press
         playTuggingSound();
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
       }
     };
 
@@ -134,7 +131,6 @@ export const MultiplayerTugOfWar = () => {
     };
   }, [gameState, pullRope, releaseRope]);
 
-<<<<<<< HEAD
   // Play audio cues - DISABLED
   useEffect(() => {
     // Sound disabled for Tug of War game
@@ -146,7 +142,7 @@ export const MultiplayerTugOfWar = () => {
     // Sound disabled for Tug of War game
     // TODO: Add proper Tug of War specific sounds
   }, [gameState, ended]);
-=======
+
   // Play win sound when team wins
   const playWinSound = () => {
     const winAudio = audioRef.current.winGame;
@@ -221,7 +217,6 @@ export const MultiplayerTugOfWar = () => {
       playBuzzerSound();
     }
   }, [gameState]);
->>>>>>> 3a81eb1 (Implemented tugging sound with fade out effect.  Added win_game.wav for winning teams. Added buzzer.wav for losing teams. Enhanced elimination modal for losing teams. Updated player models to use Supabase models with standing animations. Added audio mute/unmute functionality. Improved tug of war game experience with proper sound effects)
 
   // Squid Game style camera for multiplayer
   const SquidGameCamera = () => {
