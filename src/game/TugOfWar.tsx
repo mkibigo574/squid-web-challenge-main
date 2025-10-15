@@ -243,7 +243,6 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
           e.preventDefault();
           pullRope();
           setIsPlayerPulling(true);
-=
           // Play tugging sound on key press
           playTuggingSound();
         }
@@ -254,7 +253,7 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
       if (e.code === 'KeyW' || e.code === 'ArrowUp' || e.code === 'Space') {
         e.preventDefault();
         releaseRope();
-        setIsPlayerPulling(false);<<<<<<< HEAD
+        setIsPlayerPulling(false);
 
         // Stop tugging sound on key release
         stopTuggingSound();
