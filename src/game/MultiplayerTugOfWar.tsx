@@ -1,10 +1,12 @@
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useMultiplayerTugOfWar } from './hooks/useMultiplayerTugOfWar';
+import { cinematicCameraManager } from './utils/cinematicCamera';
 import { TugOfWarEnvironment } from './components/TugOfWarEnvironment';
 import { TugOfWarRope } from './components/TugOfWarRope';
 import { TugOfWarPlayer } from './components/TugOfWarPlayer';
 import { TugOfWarUI } from './components/TugOfWarUI';
+import { CameraControlUI } from './components/CameraControlUI';
 import { MODEL_CONFIG } from './config/models';
 import { preloadAllModels } from './utils/modelPreloader';
 import { useEffect, useRef, useState } from 'react';
@@ -201,8 +203,8 @@ export const MultiplayerTugOfWar = () => {
     }
   }, [gameState]);
 
-  // Squid Game style camera for multiplayer
-  const SquidGameCamera = () => {
+  // Advanced camera with cinematic support for multiplayer
+  const AdvancedCamera = () => {
     const { camera } = useThree();
     
     useEffect(() => {
@@ -210,25 +212,16 @@ export const MultiplayerTugOfWar = () => {
       cam.near = 0.1;
       cam.far = 1000;
       cam.updateProjectionMatrix();
+      
+      // Initialize cinematic camera manager
+      cinematicCameraManager.init(cam);
     }, [camera]);
 
     useEffect(() => {
       let raf = 0;
       const update = () => {
-        const cam = camera as THREE.PerspectiveCamera;
-        
-        // Squid Game style: Side view showing both teams clearly
-        const desiredPos = new THREE.Vector3(0, 6, 12); // Elevated side view
-        const lookAt = new THREE.Vector3(0, 1, 0); // Look at center of field
-        
-        // Smooth camera movement
-        cam.position.lerp(desiredPos, 0.05);
-        cam.lookAt(lookAt);
-        
-        // Set FOV for optimal tug of war viewing
-        const targetFov = 65;
-        cam.fov += (targetFov - cam.fov) * 0.1;
-        cam.updateProjectionMatrix();
+        // Update cinematic camera
+        cinematicCameraManager.update();
         
         raf = requestAnimationFrame(update);
       };
@@ -250,7 +243,7 @@ export const MultiplayerTugOfWar = () => {
           far: 1000
         }}
       >
-        <SquidGameCamera />
+        <AdvancedCamera />
         
         {/* Lighting */}
         <ambientLight intensity={0.4} />
@@ -374,6 +367,13 @@ export const MultiplayerTugOfWar = () => {
           ))}
         </div>
       </div>
+      
+      {/* Camera Control UI */}
+      <CameraControlUI 
+        gameState={gameState}
+        isPulling={isPulling}
+        pullStrength={pullStrength}
+      />
     </div>
   );
 };

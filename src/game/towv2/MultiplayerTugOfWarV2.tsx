@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import * as THREE from 'three';
 import { TugOfWarEnvironment } from '../components/TugOfWarEnvironment';
 import { useTowV2 } from './useTowV2';
+import { CameraControlUI } from '../components/CameraControlUI';
+import { cinematicCameraManager } from '../utils/cinematicCamera';
 
 // Fresh minimal Tug of War V2 scene scaffold
 // World height refs
@@ -370,6 +372,26 @@ function TeamPlayers({ rope, redEffort, blueEffort, detachedRed, detachedBlue, p
   );
 }
 
+// Cinematic Camera Component for TOWV2
+function CinematicCamera() {
+  const { camera } = useThree();
+  
+  useEffect(() => {
+    // Initialize cinematic camera manager
+    if (camera) {
+      console.log('🎬 Initializing cinematic camera manager with camera:', camera);
+      cinematicCameraManager.init(camera as THREE.PerspectiveCamera);
+    }
+  }, [camera]);
+
+  useFrame(() => {
+    // Update cinematic camera
+    cinematicCameraManager.update();
+  });
+  
+  return null;
+}
+
 export const MultiplayerTugOfWarV2 = () => {
   const navigate = useNavigate();
   const { 
@@ -633,6 +655,11 @@ export const MultiplayerTugOfWarV2 = () => {
   useEffect(() => {
     const pulling = phase === 'pulling' && power > 0.01;
     setSelfPulling(pulling, power);
+    
+    // Add camera shake during intense pulling
+    if (pulling && power > 0.7) {
+      cinematicCameraManager.setCameraShake(power * 0.02, 200);
+    }
   }, [phase, power, setSelfPulling]);
 
   // Trigger detachment based on rope position thresholds (same as win conditions)
@@ -703,6 +730,13 @@ export const MultiplayerTugOfWarV2 = () => {
     console.log('Modal states:', { showWinModal, showEliminationModal, phase, winner, selectedTeam });
   }, [showWinModal, showEliminationModal, phase, winner, selectedTeam]);
 
+  // Automatic cinematic camera switching based on phase (only when auto cinematic is enabled)
+  useEffect(() => {
+    // Only auto-switch if auto cinematic mode is enabled
+    // This prevents overriding manual camera changes
+    console.log('🎬 Phase changed to:', phase, 'Auto cinematic will handle switching if enabled');
+  }, [phase, winner, selectedTeam]);
+
   return (
     <div className="w-full h-screen relative bg-yellow-400">
       <Canvas
@@ -716,7 +750,15 @@ export const MultiplayerTugOfWarV2 = () => {
         {(() => {
           function CameraAutoFrame() {
             const { camera, size } = useThree();
+            
             useEffect(() => {
+              // Only auto-frame during lobby phase, not during tournament gameplay
+              if (phase !== 'lobby') {
+                console.log('🎬 Skipping auto-frame - not in lobby phase, current phase:', phase);
+                return;
+              }
+              
+              console.log('🎬 Auto-framing camera for lobby phase');
               const stageWidth = 48; // matches widened stage
               const margin = 8; // extra framing space
               const effectiveWidth = stageWidth + margin;
@@ -726,12 +768,17 @@ export const MultiplayerTugOfWarV2 = () => {
                 camera.position.set(0, 10, distance);
                 camera.lookAt(0, 1.0, 0);
                 camera.updateProjectionMatrix();
+                console.log('🎬 Auto-frame set camera to:', camera.position);
               }
-            }, [camera, size.width, size.height]);
+            }, [camera, size.width, size.height, phase]);
             return null;
           }
           return <CameraAutoFrame />;
         })()}
+        
+        {/* Cinematic Camera System */}
+        <CinematicCamera />
+        
         <ambientLight intensity={0.35} />
         <TugOfWarEnvironment />
         <Rope value={rope} phase={phase} />
@@ -797,13 +844,27 @@ export const MultiplayerTugOfWarV2 = () => {
           </>
         )}
         {phase === 'lobby' && (
-          <button className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded" onClick={initializeTournament}>Start Tournament</button>
+          <>
+            <button className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded" onClick={initializeTournament}>Start Tournament</button>
+            <CameraControlUI 
+              gameState={phase}
+              isPulling={power > 0.01}
+              pullStrength={power}
+            />
+          </>
         )}
         {phase === 'tournament' && (
           <button className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded" onClick={selectRoundPlayers}>Select Round Players</button>
         )}
         {tournamentMode && (
-          <button className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded" onClick={handleGoToLobby}>End Tournament</button>
+          <>
+            <button className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded" onClick={handleGoToLobby}>End Tournament</button>
+            <CameraControlUI 
+              gameState={phase}
+              isPulling={power > 0.01}
+              pullStrength={power}
+            />
+          </>
         )}
       </div>
       

@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { materialManager } from '../utils/materials';
 
 interface TugOfWarRopeProps {
   ropePosition: 'left' | 'center' | 'right';
@@ -103,11 +104,7 @@ export const TugOfWarRope = ({ ropePosition, gameState, pullStrength = 0, isPull
               rotation={[0, 0, Math.PI / 2]}
             >
               <cylinderGeometry args={[0.06, 0.06, 0.4]} />
-              <meshStandardMaterial 
-                color={getSectionColor(i)}
-                emissive={isPulling ? "#444444" : "#000000"}
-                emissiveIntensity={pullStrength * 0.3}
-              />
+              <primitive object={materialManager.getMaterial('rope')} />
             </mesh>
           );
         })}

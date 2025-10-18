@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
+import { EnhancedPlayer } from './EnhancedPlayer';
 
 interface TugOfWarPlayerProps {
   gameState: 'waiting' | 'countdown' | 'playing' | 'won' | 'eliminated';
@@ -509,66 +510,15 @@ export const TugOfWarPlayer = ({
 
   return (
     <group ref={groupRef}>
-      {model ? (
-        <primitive object={model} />
-      ) : (
-        // Fallback geometry while model loads
-        <mesh position={[0, 0.6, 0]}>
-          <boxGeometry args={[0.6, 1.2, 0.6]} />
-          <meshStandardMaterial color="#4ECDC4" />
-        </mesh>
-      )}
-
-      {/* Show player only if not eliminated */}
-      {gameState !== 'eliminated' && (
-        <Suspense fallback={<PlayerLoading />}>
-          {modelPath && !usePrimitive && assetChecked ? (
-            <GLBPlayer
-              modelPath={modelPath}
-              state={getAnimationState()}
-            />
-          ) : (
-            <PrimitivePlayer />
-          )}
-        </Suspense>
-      )}
-      
-      {/* Pulling indicator */}
-      {isPulling && gameState === 'playing' && (
-        <mesh position={[0, 1.5, 0]}>
-          <sphereGeometry args={[0.1]} />
-          <meshStandardMaterial color="#FFD700" />
-        </mesh>
-      )}
-      
-      {/* Victory/Defeat effects */}
-      {gameState === 'won' && (
-        <group>
-          {Array.from({ length: 10 }, (_, i) => (
-            <mesh 
-              key={i} 
-              position={[
-                Math.cos(i * 0.6) * 2,
-                Math.sin(Date.now() * 0.01 + i) * 0.5 + 1,
-                Math.sin(i * 0.6) * 2
-              ]}
-            >
-              <sphereGeometry args={[0.1]} />
-              <meshStandardMaterial color="#FFD700" />
-            </mesh>
-          ))}
-        </group>
-      )}
-      
-      {/* Show elimination effect for eliminated players */}
-      {gameState === 'eliminated' && (
-        <group>
-          <mesh position={[0, 0.3, 0]} rotation={[Math.PI / 2, 0, 0]}>
-            <boxGeometry args={[0.6, 1.2, 0.6]} />
-            <meshStandardMaterial color="#FF6B6B" />
-          </mesh>
-        </group>
-      )}
+      {/* Enhanced 3D Player Model */}
+      <EnhancedPlayer
+        position={[0, 0, 0]}
+        rotation={[0, teamSide === 'left' ? 0 : Math.PI, 0]}
+        color={teamSide === 'left' ? '#DC143C' : '#0066CC'}
+        isPulling={isPulling}
+        pullStrength={pullStrength}
+        gameState={gameState}
+      />
     </group>
   );
 };

@@ -1,10 +1,13 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
+import { cameraController } from './utils/cameraController';
+import { cinematicCameraManager } from './utils/cinematicCamera';
 import { useTugOfWar } from './hooks/useTugOfWar';
 import { TugOfWarEnvironment } from './components/TugOfWarEnvironment';
 import { TugOfWarRope } from './components/TugOfWarRope';
 import { TugOfWarPlayer } from './components/TugOfWarPlayer';
 import { TugOfWarUI } from './components/TugOfWarUI';
+import { CameraControlUI } from './components/CameraControlUI';
 import { LevelProgression } from './components/LevelProgression';
 import { MODEL_CONFIG } from './config/models';
 import { preloadAllModels } from './utils/modelPreloader';
@@ -186,40 +189,26 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
   }, [gameState]);
 
 
-  // Squid Game style camera - optimized for tug of war viewing
-  const SquidGameCamera = () => {
-    const { camera } = useThree();
+  // Advanced camera controller with cinematic support
+  const AdvancedCamera = () => {
+    const { camera, gl } = useThree();
     
     useEffect(() => {
-      const cam = camera as THREE.PerspectiveCamera;
-      cam.near = 0.1;
-      cam.far = 500;
-      cam.updateProjectionMatrix();
-    }, [camera]);
-
-    useEffect(() => {
-      let raf = 0;
-      const update = () => {
-        const cam = camera as THREE.PerspectiveCamera;
-        
-        // Squid Game style: Side view showing both teams clearly
-        const desiredPos = new THREE.Vector3(0, 6, 12); // Elevated side view
-        const lookAt = new THREE.Vector3(0, 1, 0); // Look at center of field
-        
-        // Smooth camera movement
-        cam.position.lerp(desiredPos, 0.05);
-        cam.lookAt(lookAt);
-        
-        // Set FOV for optimal tug of war viewing
-        const targetFov = 65;
-        cam.fov += (targetFov - cam.fov) * 0.1;
-        cam.updateProjectionMatrix();
-        
-        raf = requestAnimationFrame(update);
+      // Initialize camera controller
+      cameraController.init(camera as THREE.PerspectiveCamera, gl.domElement);
+      
+      // Initialize cinematic camera manager
+      cinematicCameraManager.init(camera as THREE.PerspectiveCamera);
+      
+      return () => {
+        cameraController.dispose();
       };
-      raf = requestAnimationFrame(update);
-      return () => cancelAnimationFrame(raf);
-    }, [camera]);
+    }, [camera, gl]);
+    
+    useFrame(() => {
+      cameraController.update();
+      cinematicCameraManager.update();
+    });
     
     return null;
   };
@@ -286,10 +275,8 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
           far: 500
         }}
       >
-        {/* Squid Game style camera */}
-        <SquidGameCamera />
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[5, 10, -5]} intensity={0.8} castShadow />
+        {/* Advanced camera controller */}
+        <AdvancedCamera />
         
         <TugOfWarEnvironment />
         
@@ -364,6 +351,13 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
           // This will be handled by the parent component
           console.log('Next level requested');
         }}
+      />
+      
+      {/* Camera Control UI */}
+      <CameraControlUI 
+        gameState={gameState}
+        isPulling={isPulling}
+        pullStrength={pullStrength}
       />
     </div>
   );

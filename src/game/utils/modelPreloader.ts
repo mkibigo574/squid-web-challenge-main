@@ -1,5 +1,6 @@
 import { useGLTF } from '@react-three/drei';
 import { MODEL_CONFIG } from '../config/models';
+import { isValidModelPath } from './modelValidation';
 
 // Cache for loaded models to avoid re-downloading
 const loadedModels = new Set<string>();
@@ -64,10 +65,7 @@ export const preloadModelWithFallback = async (supabaseUrl: string, localPath: s
   }
 
   // Check if Supabase URL is valid before trying to load
-  const isSupabaseUrlValid = supabaseUrl && 
-    !supabaseUrl.includes('undefined') && 
-    !supabaseUrl.includes('your-supabase-url') &&
-    supabaseUrl.startsWith('http');
+  const isSupabaseUrlValid = isValidModelPath(supabaseUrl) && supabaseUrl.startsWith('http');
 
   if (isSupabaseUrlValid) {
     try {
@@ -96,13 +94,20 @@ export const preloadModelWithFallback = async (supabaseUrl: string, localPath: s
   }
 };
 
-// Preload specific model
+// Preload specific model with better error handling
 export const preloadModel = (path: string): Promise<void> => {
   return new Promise((resolve, reject) => {
+    // Validate path before attempting to preload
+    if (!isValidModelPath(path)) {
+      reject(new Error(`Invalid model path: ${path}`));
+      return;
+    }
+    
     try {
       useGLTF.preload(path);
       resolve();
     } catch (error) {
+      console.warn(`Failed to preload model at path: ${path}`, error);
       reject(error);
     }
   });

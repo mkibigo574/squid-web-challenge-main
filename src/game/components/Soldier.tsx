@@ -4,6 +4,8 @@ import * as THREE from 'three';
 import { MODEL_CONFIG } from '../config/models';
 import { SkeletonUtils } from 'three-stdlib';
 import { processScene } from '../utils/modelLoader';
+import { ModelErrorBoundary } from './ModelErrorBoundary';
+import { isValidModelPath, isSupabaseUrl, isLocalPath } from '../utils/modelValidation';
 interface SoldierProps {
   position: [number, number, number];
   rotation?: [number, number, number];
@@ -13,17 +15,29 @@ const GLBSoldier = ({ supabasePath, localPath }: { supabasePath: string; localPa
   let scene, animations;
   let source = 'none';
   
-  // Try Supabase first
-  try {
-    const gltf = useGLTF(supabasePath);
-    scene = gltf.scene;
-    animations = gltf.animations || [];
-    source = 'supabase';
-    console.log('Successfully loaded soldier model from Supabase');
-  } catch (supabaseError) {
-    console.warn('Failed to load soldier model from Supabase, trying local fallback:', supabaseError);
-    
-    // Try local fallback
+  // Check if paths are valid before attempting to load
+  const isSupabaseValid = isSupabaseUrl(supabasePath);
+  const isLocalValid = isLocalPath(localPath);
+  
+  // Try Supabase first if valid
+  if (isSupabaseValid) {
+    try {
+      const gltf = useGLTF(supabasePath);
+      scene = gltf.scene;
+      animations = gltf.animations || [];
+      source = 'supabase';
+      console.log('Successfully loaded soldier model from Supabase');
+    } catch (supabaseError) {
+      console.warn('Failed to load soldier model from Supabase, trying local fallback:', supabaseError);
+      scene = null;
+      animations = [];
+    }
+  } else {
+    console.warn('Supabase path not valid, trying local fallback:', supabasePath);
+  }
+  
+  // Try local fallback if Supabase failed or wasn't valid
+  if (!scene && isLocalValid) {
     try {
       const gltf = useGLTF(localPath);
       scene = gltf.scene;
@@ -36,6 +50,11 @@ const GLBSoldier = ({ supabasePath, localPath }: { supabasePath: string; localPa
       animations = [];
       source = 'primitive';
     }
+  } else if (!scene) {
+    console.warn('No valid paths available, using primitive fallback');
+    scene = null;
+    animations = [];
+    source = 'primitive';
   }
   
   if (!scene) {
@@ -63,9 +82,11 @@ export const Soldier = ({ position, rotation = [0, Math.PI, 0] }: SoldierProps) 
   const localPath = MODEL_CONFIG.soldier.localPath;
   return (
     <group position={position} rotation={rotation}>
-      <Suspense fallback={null}>
-        <GLBSoldier supabasePath={supabasePath} localPath={localPath} />
-      </Suspense>
+      <ModelErrorBoundary>
+        <Suspense fallback={null}>
+          <GLBSoldier supabasePath={supabasePath} localPath={localPath} />
+        </Suspense>
+      </ModelErrorBoundary>
     </group>
   );
 };

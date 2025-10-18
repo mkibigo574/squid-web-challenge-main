@@ -7,6 +7,8 @@ import { MODEL_CONFIG } from '../config/models';
 import { NameTag } from './NameTag';
 import { useGLTF } from '@react-three/drei';
 import { SkeletonUtils } from 'three-stdlib';
+import { ModelErrorBoundary } from './ModelErrorBoundary';
+import { isValidModelPath } from '../utils/modelValidation';
 
 interface BotProps {
   lightState: LightState;
@@ -61,14 +63,22 @@ function EliminationEffectBot() {
 
 const BotGLB = ({ modelPath, state }: { modelPath: string; state: string }) => {
   let scene, animations;
-  try {
-    const gltf = useGLTF(modelPath);
-    scene = gltf.scene;
-    animations = gltf.animations;
-  } catch (error) {
-    console.warn('Failed to load bot model, using fallback:', error);
+  
+  // Check if model path is valid before attempting to load
+  if (!isValidModelPath(modelPath)) {
+    console.warn('Invalid model path for bot, using fallback:', modelPath);
     scene = null;
     animations = [];
+  } else {
+    try {
+      const gltf = useGLTF(modelPath);
+      scene = gltf.scene;
+      animations = gltf.animations;
+    } catch (error) {
+      console.warn('Failed to load bot model, using fallback:', error);
+      scene = null;
+      animations = [];
+    }
   }
   
   if (!scene) {
@@ -157,9 +167,11 @@ export function Bot({ lightState, gameState, name, startX }: BotProps) {
   return (
     <group ref={botGroupRef} position={[startX, 0, -5]}>
       {!isEliminated() && (
-        <Suspense fallback={null}>
-          <BotGLB modelPath={modelPath} state={animState} />
-        </Suspense>
+        <ModelErrorBoundary>
+          <Suspense fallback={null}>
+            <BotGLB modelPath={modelPath} state={animState} />
+          </Suspense>
+        </ModelErrorBoundary>
       )}
       {isEliminated() && <EliminationEffectBot />}
       <NameTag name={name} position={[0, 2.5, 0]} isEliminated={isEliminated()} color="#f59e0b" />
