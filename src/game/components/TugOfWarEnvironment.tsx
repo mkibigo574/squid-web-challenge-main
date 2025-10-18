@@ -121,30 +121,54 @@ export const TugOfWarEnvironment = () => {
               <meshStandardMaterial color="#8B4513" />
         </mesh>
             
-            {/* Optimized brick wall - simplified for performance */}
-            {Array.from({ length: 15 }, (_, layer) => {
-              // Reduced layers for better performance
-              const layerHeight = -16 + (layer * 1.0); // 15 layers with 1.0 unit spacing
-              const isOffsetLayer = layer % 2 === 1; // Offset every other layer
-              
-              return Array.from({ length: 20 }, (_, i) => {
-                const brickX = -9.8 + (i * 1.0); // 20 bricks with 1.0 unit spacing
-                const brickY = layerHeight;
-                const brickZ = 0;
-                const finalX = isOffsetLayer ? brickX + 0.5 : brickX; // Half-brick offset
-                
-                // Only place brick if it's within the pole gap
-                if (finalX >= -9.8 && finalX <= 9.8) {
-                  return (
-                    <mesh key={`brick-${layer}-${i}`} position={[finalX, brickY, brickZ]} castShadow receiveShadow>
-                      <boxGeometry args={[0.8, 0.8, 0.2]} />
-                      <primitive object={materialManager.getMaterial('weatheredStone')} />
-                    </mesh>
-                  );
-                }
-                return null;
-              }).filter(Boolean);
-            }).flat()}
+            {/* Supporting beams for elevated structure - Black industrial look */}
+            {/* Left side supporting beams */}
+            <mesh position={[-8, -8, 2]} castShadow receiveShadow>
+              <boxGeometry args={[0.3, 14, 0.3]} />
+              <meshStandardMaterial color="#000000" metalness={0.3} roughness={0.6} />
+            </mesh>
+            <mesh position={[-8, -8, -2]} castShadow receiveShadow>
+              <boxGeometry args={[0.3, 14, 0.3]} />
+              <meshStandardMaterial color="#000000" metalness={0.3} roughness={0.6} />
+            </mesh>
+            
+            {/* Left side cross-bracing */}
+            <mesh position={[-8, -1, 0]} rotation={[0, 0, Math.PI / 2]} castShadow receiveShadow>
+              <boxGeometry args={[0.2, 4, 0.2]} />
+              <meshStandardMaterial color="#000000" metalness={0.2} roughness={0.7} />
+            </mesh>
+            <mesh position={[-8, -5, 0]} rotation={[0, 0, Math.PI / 2]} castShadow receiveShadow>
+              <boxGeometry args={[0.2, 4, 0.2]} />
+              <meshStandardMaterial color="#000000" metalness={0.2} roughness={0.7} />
+            </mesh>
+            <mesh position={[-8, -9, 0]} rotation={[0, 0, Math.PI / 2]} castShadow receiveShadow>
+              <boxGeometry args={[0.2, 4, 0.2]} />
+              <meshStandardMaterial color="#000000" metalness={0.2} roughness={0.7} />
+            </mesh>
+            
+            {/* Right side supporting beams */}
+            <mesh position={[8, -8, 2]} castShadow receiveShadow>
+              <boxGeometry args={[0.3, 14, 0.3]} />
+              <meshStandardMaterial color="#000000" metalness={0.3} roughness={0.6} />
+            </mesh>
+            <mesh position={[8, -8, -2]} castShadow receiveShadow>
+              <boxGeometry args={[0.3, 14, 0.3]} />
+              <meshStandardMaterial color="#000000" metalness={0.3} roughness={0.6} />
+            </mesh>
+            
+            {/* Right side cross-bracing */}
+            <mesh position={[8, -1, 0]} rotation={[0, 0, Math.PI / 2]} castShadow receiveShadow>
+              <boxGeometry args={[0.2, 4, 0.2]} />
+              <meshStandardMaterial color="#000000" metalness={0.2} roughness={0.7} />
+            </mesh>
+            <mesh position={[8, -5, 0]} rotation={[0, 0, Math.PI / 2]} castShadow receiveShadow>
+              <boxGeometry args={[0.2, 4, 0.2]} />
+              <meshStandardMaterial color="#000000" metalness={0.2} roughness={0.7} />
+            </mesh>
+            <mesh position={[8, -9, 0]} rotation={[0, 0, Math.PI / 2]} castShadow receiveShadow>
+              <boxGeometry args={[0.2, 4, 0.2]} />
+              <meshStandardMaterial color="#000000" metalness={0.2} roughness={0.7} />
+            </mesh>
           </group>
         ))}
       </group>
