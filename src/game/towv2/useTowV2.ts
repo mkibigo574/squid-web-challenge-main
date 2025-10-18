@@ -380,7 +380,7 @@ export function useTowV2() {
     if (!host || phase !== 'pulling') return;
     const id = setInterval(() => {
       const now = Date.now();
-      if (now - lastUpdateRef.current < 150) return; // Reduced frequency for better performance
+      if (now - lastUpdateRef.current < 30) return; // Even higher frequency for individual pulls
       lastUpdateRef.current = now;
 
       const red = players.filter(p => p.team === 'red');
@@ -388,13 +388,14 @@ export function useTowV2() {
       const redPower = red.reduce((s, p) => s + (p.isPulling ? p.pullPower : 0), 0);
       const bluePower = blue.reduce((s, p) => s + (p.isPulling ? p.pullPower : 0), 0);
       
+      
       // Check if any team is pulling
       const isAnyTeamPulling = redPower > 0 || bluePower > 0;
       
       let delta;
       if (isAnyTeamPulling) {
-        // Normal pulling physics when teams are active
-        delta = (bluePower - redPower) * 0.15;
+        // Normal pulling physics when teams are active - increased sensitivity for individual pulls
+        delta = (bluePower - redPower) * 0.25; // Increased from 0.15 to 0.25
       } else {
         // Loose rope physics when no team is pulling - rope slowly returns to center
         const centerForce = -rope * 0.05; // Gentle pull toward center
@@ -451,7 +452,7 @@ export function useTowV2() {
       }
       setRope(next);
       broadcastState({ v2: true, phase: 'pulling', rope: next });
-    }, 100);
+    }, 30); // Higher frequency for more responsive individual pulls
     return () => clearInterval(id);
   }, [host, phase, players, rope, broadcastState, tournamentMode, endRound]);
 

@@ -36,15 +36,6 @@ function Rope({ value, phase = 'pulling' }: { value: number; phase?: string }) {
       ropeY += FLOATING_OFFSET;
     }
     group.current.position.set(0, ropeY, 0);
-    
-    // Debug: Log rope positioning
-    console.log('Rope positioning debug:', {
-      ropeY,
-      leftEndX,
-      rightEndX,
-      ropeCenterX,
-      phase
-    });
   });
 
   const spacing = 0.35;
@@ -121,18 +112,6 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       // So player group should be at: ropeY - HAND_LOCAL_Y
       currentYRef.current = ropeY - HAND_LOCAL_Y + Math.max(0, bob);
       
-      // Debug: Log hand positions for first player
-      if (side === 'left' && playerIndex === 0) {
-        console.log('Hand positioning debug:', {
-          playerX: currentXRef.current,
-          playerY: currentYRef.current,
-          leftHandX: currentXRef.current - 0.1,
-          rightHandX: currentXRef.current + 0.1,
-          handY: currentYRef.current + HAND_LOCAL_Y,
-          ropeY,
-          phase
-        });
-      }
       vyRef.current = 0;
       hasDetachedRef.current = false;
       isDisappearingRef.current = false; // Reset disappearing state
@@ -402,6 +381,7 @@ export const MultiplayerTugOfWarV2 = () => {
     initializeTournament, selectRoundPlayers, startRound, endRound, resetTournament
   } = useTowV2() as any;
   const [power, setPower] = useState(0);
+  const powerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [detachedRed, setDetachedRed] = useState(false);
   const [detachedBlue, setDetachedBlue] = useState(false);
   const [showWinModal, setShowWinModal] = useState(false);
@@ -570,8 +550,6 @@ export const MultiplayerTugOfWarV2 = () => {
 
   useEffect(() => {
     const pressedKeys = new Set<string>();
-    let lastInputTime = 0;
-    const inputCooldown = 200; // 200ms cooldown between inputs (increased to prevent rapid tapping)
     
     const onKeyDown = (e: KeyboardEvent) => {
       // Only respond to 'W' key or 'Up arrow' key
@@ -587,20 +565,29 @@ export const MultiplayerTugOfWarV2 = () => {
         // Add key to pressed set
         pressedKeys.add(e.key.toLowerCase());
         
-        const now = Date.now();
-        if (now - lastInputTime >= inputCooldown) {
-          lastInputTime = now;
-          // Single key press - add power once
-          setPower(p => Math.min(1, p + 0.3)); // Increased power per press since no holding allowed
-          
-
-          // Play tugging sound on key press
-          playTuggingSound();
-          
-          // Show visual feedback for key press
-          setKeyPressFeedback(true);
-          setTimeout(() => setKeyPressFeedback(false), 150);
+        // IMMEDIATE PULL ACTION - Each key press creates independent pull
+        setPower(1.0); // Full power for each individual pull
+        
+        // IMMEDIATE multiplayer update - no debounce for key presses
+        setSelfPulling(true, 1.0);
+        
+        // Immediate visual feedback
+        setKeyPressFeedback(true);
+        setTimeout(() => setKeyPressFeedback(false), 100);
+        
+        // Play tugging sound immediately
+        playTuggingSound();
+        
+        // Clear existing timeout and set new one for power reset
+        if (powerTimeoutRef.current) {
+          clearTimeout(powerTimeoutRef.current);
         }
+        
+        // Reset power after short delay to allow rapid independent pulls
+        powerTimeoutRef.current = setTimeout(() => {
+          setPower(0);
+          setSelfPulling(false, 0);
+        }, 150); // Short delay for independent pulls
       }
     };
     
@@ -608,7 +595,6 @@ export const MultiplayerTugOfWarV2 = () => {
       // Remove key from pressed set when released
       if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
         pressedKeys.delete(e.key.toLowerCase());
-
         // Stop tugging sound on key release
         stopTuggingSound();
       }
@@ -620,14 +606,24 @@ export const MultiplayerTugOfWarV2 = () => {
     return () => { 
       window.removeEventListener('keydown', onKeyDown); 
       window.removeEventListener('keyup', onKeyUp);
+      // Cleanup power timeout
+      if (powerTimeoutRef.current) {
+        clearTimeout(powerTimeoutRef.current);
+      }
     };
   }, [phase, isMuted]);
 
+  // Use requestAnimationFrame for smoother power decay
   useEffect(() => {
-    const id = setInterval(() => {
-      setPower(p => Math.max(0, p - 0.08)); // Balanced decay rate for single key presses
-    }, 100);
-    return () => clearInterval(id);
+    let animationId: number;
+    
+    const updatePower = () => {
+      setPower(p => Math.max(0, p - 0.02)); // Slower decay for sustained movement
+      animationId = requestAnimationFrame(updatePower);
+    };
+    
+    animationId = requestAnimationFrame(updatePower);
+    return () => cancelAnimationFrame(animationId);
   }, []);
 
   // Force UI update when team players change to ensure eliminated players are properly reflected
@@ -652,14 +648,32 @@ export const MultiplayerTugOfWarV2 = () => {
     }
   }, [phase, tournamentMode]);
 
+  // Debounced multiplayer updates for better performance
+  const multiplayerUpdateRef = useRef<NodeJS.Timeout>();
+  
   useEffect(() => {
     const pulling = phase === 'pulling' && power > 0.01;
-    setSelfPulling(pulling, power);
+    
+    // Debounce multiplayer updates to avoid spam
+    if (multiplayerUpdateRef.current) {
+      clearTimeout(multiplayerUpdateRef.current);
+    }
+    
+    multiplayerUpdateRef.current = setTimeout(() => {
+      setSelfPulling(pulling, power);
+    }, 16); // ~60fps update rate
     
     // Add camera shake during intense pulling
     if (pulling && power > 0.7) {
       cinematicCameraManager.setCameraShake(power * 0.02, 200);
     }
+    
+    // Cleanup on unmount
+    return () => {
+      if (multiplayerUpdateRef.current) {
+        clearTimeout(multiplayerUpdateRef.current);
+      }
+    };
   }, [phase, power, setSelfPulling]);
 
   // Trigger detachment based on rope position thresholds (same as win conditions)
