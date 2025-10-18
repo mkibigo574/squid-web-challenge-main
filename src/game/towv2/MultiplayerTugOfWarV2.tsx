@@ -384,7 +384,6 @@ export const MultiplayerTugOfWarV2 = () => {
   const powerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [detachedRed, setDetachedRed] = useState(false);
   const [detachedBlue, setDetachedBlue] = useState(false);
-  const [showWinModal, setShowWinModal] = useState(false);
   const [showEliminationModal, setShowEliminationModal] = useState(false);
   const [roundCountdown, setRoundCountdown] = useState(3);
   const [forceUpdate, setForceUpdate] = useState(0);
@@ -407,7 +406,8 @@ export const MultiplayerTugOfWarV2 = () => {
     // Configure audio and add event listeners for debugging
     Object.entries(audioRef.current).forEach(([key, audio]) => {
       audio.volume = 0.7;
-      audio.muted = isMuted;
+      audio.muted = false; // Start unmuted, will be updated by mute effect
+      audio.preload = 'auto'; // Ensure audio is preloaded
       
       // Add event listeners for debugging
       audio.addEventListener('loadstart', () => console.log(`${key} audio: loadstart`));
@@ -417,6 +417,9 @@ export const MultiplayerTugOfWarV2 = () => {
       audio.addEventListener('error', (e) => console.error(`${key} audio error:`, e));
       audio.addEventListener('play', () => console.log(`${key} audio: play started`));
       audio.addEventListener('ended', () => console.log(`${key} audio: ended`));
+      
+      // Force load the audio
+      audio.load();
     });
 
     return () => {
@@ -454,6 +457,7 @@ export const MultiplayerTugOfWarV2 = () => {
       // Ensure audio is not muted
       winAudio.muted = false;
       winAudio.currentTime = 0;
+      winAudio.volume = 0.7;
       
       // Try to play the audio
       const playPromise = winAudio.play();
@@ -485,14 +489,33 @@ export const MultiplayerTugOfWarV2 = () => {
 
   // Play tugging sound
   const playTuggingSound = () => {
+    console.log('🎵 Attempting to play tugging sound...');
     const tuggingAudio = audioRef.current.tugging;
+    console.log('Tugging audio object:', tuggingAudio);
+    console.log('Tugging audio src:', tuggingAudio?.src);
+    console.log('Tugging audio muted:', tuggingAudio?.muted);
+    console.log('Phase:', phase);
+    
     if (tuggingAudio && tuggingAudio.src && phase === 'pulling') {
+      // Ensure audio is not muted
+      tuggingAudio.muted = false;
       tuggingAudio.currentTime = 0;
       tuggingAudio.volume = 0.7;
-      tuggingAudio.muted = isMuted;
-      tuggingAudio.play().catch(() => {
-        console.log('Tugging audio play failed (autoplay restrictions)');
-      });
+      
+      // Try to play the audio
+      const playPromise = tuggingAudio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          console.log('✅ Tugging audio played successfully!');
+        }).catch((error) => {
+          console.log('❌ Tugging audio play failed:', error);
+          // Try to load the audio again if it failed
+          tuggingAudio.load();
+        });
+      }
+    } else {
+      console.log('❌ Tugging audio not available, no src, or wrong phase');
     }
   };
 
@@ -713,36 +736,33 @@ export const MultiplayerTugOfWarV2 = () => {
       // Reset detachment when explicitly resetting the game
       setDetachedRed(false);
       setDetachedBlue(false);
-      setShowWinModal(false);
       setShowEliminationModal(false);
     }
     // Don't reset modals during 'results' phase - let them stay visible
   }, [phase, rope, detachedRed, detachedBlue, selectedTeam]);
 
-  // Show win modal when results phase starts - only for the winning team
+  // Play win sound when player wins (without modal)
   useEffect(() => {
-    console.log('Win modal effect:', { phase, winner, selectedTeam, showWinModal });
     if (phase === 'results' && winner) {
       console.log('Results phase with winner:', winner, 'selectedTeam:', selectedTeam);
       if (selectedTeam === winner) {
-        console.log('Showing win modal for winning team');
-
+        console.log('Playing win sound for winning team');
         // Play win sound for winning team
         playWinSound();
-        // Add a small delay to ensure the modal shows properly
-        setTimeout(() => {
-          setShowWinModal(true);
-        }, 100);
       } else {
-        console.log('Not showing win modal - different team');
+        console.log('Not playing win sound - different team');
       }
     }
   }, [phase, winner, selectedTeam]);
 
-  // Debug modal states
+  // Play win sound when tournament winner modal appears
   useEffect(() => {
-    console.log('Modal states:', { showWinModal, showEliminationModal, phase, winner, selectedTeam });
-  }, [showWinModal, showEliminationModal, phase, winner, selectedTeam]);
+    if (phase === 'tournament-winner' && tournamentWinner) {
+      console.log('Tournament winner phase - playing win sound for:', tournamentWinner);
+      // Play win sound for tournament winner
+      playWinSound();
+    }
+  }, [phase, tournamentWinner]);
 
   // Automatic cinematic camera switching based on phase (only when auto cinematic is enabled)
   useEffect(() => {
@@ -1203,102 +1223,6 @@ export const MultiplayerTugOfWarV2 = () => {
               <button
                   onClick={handleGoToLobby}
                   className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-110 shadow-xl border-2 border-gray-800"
-                >
-                  🏠 Go to Lobby
-              </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Win Modal */}
-      {showWinModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          {/* Money Rain Background */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {Array.from({ length: 9 }, (_, i) => (
-              <div
-                key={i}
-                className="absolute text-3xl opacity-80 money-rain"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: '-10%',
-                  animationDuration: `${2.5 + Math.random() * 1.5}s`,
-                  animationDelay: `${Math.random() * 3}s`,
-                  transform: `rotate(${Math.random() * 360}deg)`,
-                }}
-              >
-                💵
-              </div>
-            ))}
-            {Array.from({ length: 6 }, (_, i) => (
-              <div
-                key={`coin-${i}`}
-                className="absolute text-2xl opacity-70 money-rain"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: '-10%',
-                  animationDuration: `${2 + Math.random() * 1}s`,
-                  animationDelay: `${Math.random() * 2.5}s`,
-                  transform: `rotate(${Math.random() * 360}deg)`,
-                }}
-              >
-                🪙
-              </div>
-            ))}
-            {Array.from({ length: 4 }, (_, i) => (
-              <div
-                key={`bill-${i}`}
-                className="absolute text-xl opacity-60 money-rain"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: '-10%',
-                  animationDuration: `${3 + Math.random() * 1.5}s`,
-                  animationDelay: `${Math.random() * 4}s`,
-                  transform: `rotate(${Math.random() * 360}deg)`,
-                }}
-              >
-                💴
-              </div>
-            ))}
-          </div>
-          
-          <div className="relative bg-gradient-to-br from-green-400 via-green-300 to-green-500 rounded-3xl p-6 max-w-md mx-4 text-center shadow-2xl border-4 border-green-600 animate-pulse">
-            {/* Confetti Effect */}
-            <div className="absolute -top-2 -left-2 -right-2 -bottom-2 bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 to-blue-500 rounded-3xl opacity-15 animate-spin"></div>
-            
-            <div className="relative z-10">
-            <div className="animate-bounce">
-                <div className="text-7xl mb-4">🎉</div>
-                <h2 className="text-3xl font-black text-gray-900 mb-2 drop-shadow-lg">
-                  <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                    {selectedTeam === 'blue' ? 'BLUE TEAM' : 'RED TEAM'}
-                  </span>
-                  <br />
-                  <span className="text-xl text-gray-800">WINS!</span>
-              </h2>
-                <p className="text-lg text-gray-800 font-bold mb-4">🎊 Congratulations! 🎊</p>
-            </div>
-              
-              {/* Prize money display */}
-              <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-gray-900 rounded-xl p-3 mb-4 shadow-lg">
-                <div className="text-xl font-black">💰 $1,000,000 💰</div>
-                <div className="text-sm font-semibold">Round Prize!</div>
-              </div>
-              
-              <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => {
-                  setShowWinModal(false);
-                }}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-110 shadow-lg border-2 border-blue-800"
-              >
-                🎮 Play Again
-              </button>
-                <button
-                  onClick={handleGoToLobby}
-                  className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-110 shadow-lg border-2 border-gray-800"
                 >
                   🏠 Go to Lobby
               </button>

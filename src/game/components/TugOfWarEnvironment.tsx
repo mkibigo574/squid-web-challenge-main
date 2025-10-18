@@ -73,7 +73,7 @@ export const TugOfWarEnvironment = () => {
   return (
     <group>
       {/* Background floor to catch stylized lighting */}
-      <mesh ref={groundRef} position={[0, -8, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <mesh ref={groundRef} position={[0, -8.5, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[80, 60]} />
         <primitive object={materialManager.getMaterial('grittySand')} />
       </mesh>
@@ -168,7 +168,7 @@ export const TugOfWarEnvironment = () => {
             <mesh position={[8, -9, 0]} rotation={[0, 0, Math.PI / 2]} castShadow receiveShadow>
               <boxGeometry args={[0.2, 4, 0.2]} />
               <meshStandardMaterial color="#000000" metalness={0.2} roughness={0.7} />
-            </mesh>
+                    </mesh>
           </group>
         ))}
       </group>

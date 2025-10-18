@@ -165,7 +165,7 @@ export class EnvironmentManager {
       const pebble = this.createPebble();
       pebble.position.set(
         (Math.random() - 0.5) * 100,
-        -5.5,
+        -8.3, // Positioned just above the ground floor
         (Math.random() - 0.5) * 100
       );
       detailsGroup.add(pebble);
@@ -176,7 +176,7 @@ export class EnvironmentManager {
       const dust = this.createDustParticle();
       dust.position.set(
         (Math.random() - 0.5) * 100,
-        -5.2,
+        -8.4, // Positioned just above the ground floor
         (Math.random() - 0.5) * 100
       );
       detailsGroup.add(dust);
