@@ -393,6 +393,7 @@ export const MultiplayerTugOfWarV2 = () => {
   const audioRef = useRef<{ [key: string]: HTMLAudioElement }>({});
   const [isMuted, setIsMuted] = useState(false);
   const fadeOutIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const backgroundMusicRef = useRef<HTMLAudioElement | null>(null);
 
   // Initialize audio
   useEffect(() => {
@@ -402,6 +403,13 @@ export const MultiplayerTugOfWarV2 = () => {
       buzzer: new Audio('/audio/Buzzer.wav'),
       tugging: new Audio('/audio/tugging_sound.wav'),
     };
+
+    // Initialize background music
+    backgroundMusicRef.current = new Audio('/audio/background.mp3');
+    backgroundMusicRef.current.volume = 0.2;
+    backgroundMusicRef.current.loop = true;
+    backgroundMusicRef.current.muted = false;
+    backgroundMusicRef.current.preload = 'auto';
 
     // Configure audio and add event listeners for debugging
     Object.entries(audioRef.current).forEach(([key, audio]) => {
@@ -422,6 +430,20 @@ export const MultiplayerTugOfWarV2 = () => {
       audio.load();
     });
 
+    // Add background music event listeners
+    if (backgroundMusicRef.current) {
+      backgroundMusicRef.current.addEventListener('loadstart', () => console.log('Background music: loadstart'));
+      backgroundMusicRef.current.addEventListener('loadeddata', () => console.log('Background music: loadeddata'));
+      backgroundMusicRef.current.addEventListener('canplay', () => console.log('Background music: canplay'));
+      backgroundMusicRef.current.addEventListener('canplaythrough', () => console.log('Background music: canplaythrough'));
+      backgroundMusicRef.current.addEventListener('error', (e) => console.error('Background music error:', e));
+      backgroundMusicRef.current.addEventListener('play', () => console.log('Background music: play started'));
+      backgroundMusicRef.current.addEventListener('ended', () => console.log('Background music: ended'));
+      
+      // Force load the background music
+      backgroundMusicRef.current.load();
+    }
+
     return () => {
       Object.values(audioRef.current).forEach(audio => {
         audio.pause();
@@ -432,6 +454,11 @@ export const MultiplayerTugOfWarV2 = () => {
         clearInterval(fadeOutIntervalRef.current);
         fadeOutIntervalRef.current = null;
       }
+      // Stop background music
+      if (backgroundMusicRef.current) {
+        backgroundMusicRef.current.pause();
+        backgroundMusicRef.current.currentTime = 0;
+      }
     };
   }, []);
 
@@ -440,6 +467,10 @@ export const MultiplayerTugOfWarV2 = () => {
     Object.values(audioRef.current).forEach(audio => {
       audio.muted = isMuted;
     });
+    // Update background music mute state
+    if (backgroundMusicRef.current) {
+      backgroundMusicRef.current.muted = isMuted;
+    }
     console.log(`Audio ${isMuted ? 'muted' : 'unmuted'}`);
   }, [isMuted]);
 
@@ -551,6 +582,25 @@ export const MultiplayerTugOfWarV2 = () => {
           tuggingAudio.volume = 0.7; // Reset volume for next time
         }
       }, stepDuration);
+    }
+  };
+
+  // Start background music
+  const startBackgroundMusic = () => {
+    console.log('🎵 Starting background music...');
+    if (backgroundMusicRef.current && backgroundMusicRef.current.paused) {
+      backgroundMusicRef.current.currentTime = 0;
+      backgroundMusicRef.current.play().catch((error) => {
+        console.log('Background music play failed (autoplay restrictions):', error);
+      });
+    }
+  };
+
+  // Stop background music
+  const stopBackgroundMusic = () => {
+    console.log('🎵 Stopping background music...');
+    if (backgroundMusicRef.current && !backgroundMusicRef.current.paused) {
+      backgroundMusicRef.current.pause();
     }
   };
 
@@ -763,6 +813,18 @@ export const MultiplayerTugOfWarV2 = () => {
       playWinSound();
     }
   }, [phase, tournamentWinner]);
+
+  // Start background music when player joins the room
+  useEffect(() => {
+    // Start background music after a short delay to ensure audio context is ready
+    const startMusicTimer = setTimeout(() => {
+      startBackgroundMusic();
+    }, 1000);
+
+    return () => {
+      clearTimeout(startMusicTimer);
+    };
+  }, []); // Run once when component mounts
 
   // Automatic cinematic camera switching based on phase (only when auto cinematic is enabled)
   useEffect(() => {
