@@ -2,6 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Responsive Start Round Button Styles */
+@layer utilities {
+  .start-round-button {
+    /* Ensure button is always visible and accessible */
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+  }
+  
+  /* Mobile-first responsive design */
+  @media (max-width: 640px) {
+    .start-round-button {
+      font-size: 1rem !important;
+      padding: 0.75rem 1.5rem !important;
+      min-width: 160px !important;
+      max-width: 85vw !important;
+    }
+  }
+  
+  /* Tablet and up */
+  @media (min-width: 641px) {
+    .start-round-button {
+      font-size: 1.25rem !important;
+      padding: 1rem 2rem !important;
+      min-width: 200px !important;
+    }
+  }
+  
+  /* Desktop and up */
+  @media (min-width: 1024px) {
+    .start-round-button {
+      font-size: 1.5rem !important;
+      padding: 1.5rem 3rem !important;
+      min-width: 240px !important;
+    }
+  }
+  
+  /* Landscape orientation adjustments */
+  @media (orientation: landscape) and (max-height: 600px) {
+    .start-round-button {
+      font-size: 1rem !important;
+      padding: 0.5rem 1rem !important;
+      min-width: 140px !important;
+    }
+  }
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */

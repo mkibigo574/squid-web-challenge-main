@@ -964,16 +964,15 @@ export const MultiplayerTugOfWarV2 = () => {
         )}
       </div>
       
-          {/* Start Round button - centered when team is selected in tournament mode */}
+          {/* Start Round button - responsive positioning for different screen orientations */}
           {phase === 'positioning' && selectedTeam && tournamentMode && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ transform: 'translate(-50%, calc(-50% - 25rem))' }}>
-              <button 
-                className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-black text-2xl px-12 py-6 rounded-2xl shadow-2xl transform hover:scale-110 transition-all duration-300 border-4 border-purple-400 animate-pulse"
-                onClick={startGame}
-              >
-                🎮 Start Round 🎮
-              </button>
-            </div>
+            <button 
+              className="start-round-button bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-black rounded-2xl shadow-2xl transform hover:scale-110 transition-all duration-300 border-4 border-purple-400 animate-pulse"
+              onClick={startGame}
+            >
+              <span className="block sm:hidden">🎮 Start 🎮</span>
+              <span className="hidden sm:block">🎮 Start Round 🎮</span>
+            </button>
           )}
       
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-black/90 text-sm bg-white/90 px-3 py-2 rounded border border-gray-400 shadow-lg">
