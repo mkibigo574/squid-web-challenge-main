@@ -134,11 +134,11 @@ export const GameUI = ({
   onResetGame
 }: GameUIProps) => {
   return (
-    <div className="absolute inset-0 pointer-events-none">
+    <div className="game-ui-container">
       {/* Top UI */}
-      <div className="absolute top-4 left-0 right-0 flex justify-between items-center px-8 pointer-events-auto">
+      <div className="game-ui-top">
         {/* Light State Indicator */}
-        <div className={`text-2xl font-bold px-4 py-2 rounded-lg ${
+        <div className={`game-status-mobile font-bold game-padding-mobile rounded-lg ${
           lightState === 'green' 
             ? 'bg-green-500 text-white' 
             : 'bg-red-500 text-white'
@@ -147,51 +147,51 @@ export const GameUI = ({
         </div>
         
         {/* Timer */}
-        <div className="text-3xl font-bold text-white bg-black/50 px-4 py-2 rounded-lg">
+        <div className="game-timer-mobile font-bold text-white bg-black/50 game-padding-mobile rounded-lg">
           {timeLeft}s
         </div>
       </div>
 
       {/* Center UI */}
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-auto">
+      <div className="game-ui-center">
         {gameState === 'waiting' && (
-          <div className="space-y-4">
-            <Button onClick={onStartGame} size="lg" className="text-xl px-8 py-4">
+          <div className="game-spacing-mobile">
+            <Button onClick={onStartGame} className="game-button-mobile">
               Start Game
             </Button>
           </div>
         )}
         
         {gameState === 'countdown' && (
-          <div className="text-8xl font-bold text-white">
+          <div className="game-title-mobile font-bold text-white">
             {countdown > 0 ? countdown : 'GO!'}
           </div>
         )}
         
         {gameState === 'won' && (
-          <div className="space-y-4">
+          <div className="game-spacing-mobile">
             <div className="animate-bounce">
-              <h2 className="text-8xl font-bold text-green-400 drop-shadow-lg">
+              <h2 className="game-title-mobile font-bold text-green-400 drop-shadow-lg">
                 🎉 YOU WIN! 🎉
               </h2>
-              <p className="text-2xl text-white drop-shadow-lg">
+              <p className="game-subtitle-mobile text-white drop-shadow-lg">
                 Congratulations! You reached the finish line!
               </p>
-              <div className="text-4xl">🎈🎊🎉🎈🎊🎉</div>
+              <div className="text-2xl sm:text-3xl md:text-4xl">🎈🎊🎉🎈🎊🎉</div>
             </div>
-            <Button onClick={onResetGame} size="lg" className="text-xl px-8 py-4 bg-green-600 hover:bg-green-700">
+            <Button onClick={onResetGame} className="game-button-mobile bg-green-600 hover:bg-green-700">
               Play Again
             </Button>
           </div>
         )}
         
         {gameState === 'eliminated' && (
-          <div className="space-y-4">
-            <h2 className="text-6xl font-bold text-red-400">ELIMINATED!</h2>
-            <p className="text-xl text-white">
+          <div className="game-spacing-mobile">
+            <h2 className="game-title-mobile font-bold text-red-400">ELIMINATED!</h2>
+            <p className="game-subtitle-mobile text-white">
               {timeLeft === 0 ? 'Time ran out!' : 'You moved during red light!'}
             </p>
-            <Button onClick={onResetGame} size="lg" className="text-xl px-8 py-4">
+            <Button onClick={onResetGame} className="game-button-mobile">
               Try Again
             </Button>
           </div>
@@ -199,27 +199,27 @@ export const GameUI = ({
       </div>
 
       {/* Instructions (bottom-left) */}
-      <div className="absolute bottom-4 left-4 max-w-sm pointer-events-none">
-        <div className="bg-black/50 text-white px-4 py-3 rounded-lg leading-snug">
-          <div className="font-bold">Red Light, Green Light</div>
-          <div className="text-sm">Move during GREEN LIGHT, freeze during RED LIGHT!</div>
-          <div className="text-sm">Use WASD or Arrow Keys to move</div>
+      <div className="absolute bottom-2 left-2 sm:bottom-4 sm:left-4 max-w-xs sm:max-w-sm pointer-events-none">
+        <div className="bg-black/50 text-white game-padding-mobile rounded-lg leading-snug">
+          <div className="font-bold game-status-mobile">Red Light, Green Light</div>
+          <div className="text-xs sm:text-sm">Move during GREEN LIGHT, freeze during RED LIGHT!</div>
+          <div className="text-xs sm:text-sm">Use WASD or Arrow Keys to move</div>
         </div>
       </div>
 
       {/* Bottom UI */}
       {gameState === 'playing' && (
-        <div className="absolute bottom-8 left-8 right-8 pointer-events-auto">
-          <div className="bg-black/50 p-4 rounded-lg">
-            <div className="text-white mb-2">Progress to Finish Line</div>
-            <Progress value={progress * 100} className="h-4" />
+        <div className="game-ui-side">
+          <div className="bg-black/50 game-padding-mobile rounded-lg">
+            <div className="text-white mb-2 game-status-mobile">Progress to Finish Line</div>
+            <Progress value={progress * 100} className="h-2 sm:h-3 md:h-4" />
           </div>
         </div>
       )}
 
       {/* Controls hint */}
       {gameState === 'playing' && (
-        <div className="absolute bottom-4 right-4 text-white bg-black/50 px-3 py-2 rounded">
+        <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 text-white bg-black/50 px-2 py-1 sm:px-3 sm:py-2 rounded text-xs sm:text-sm">
           WASD / Arrow Keys to move
         </div>
       )}

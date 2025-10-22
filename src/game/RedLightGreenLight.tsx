@@ -282,7 +282,7 @@ export const RedLightGreenLight = ({ onLevelChange, onNextLevel }: RedLightGreen
   }, []);
 
   return (
-    <div className="w-full h-screen relative bg-gradient-to-b from-purple-400 to-purple-600">
+    <div className="game-viewport relative bg-gradient-to-b from-purple-400 to-purple-600">
       {/* Level Progression */}
       <LevelProgression 
         onLevelChange={onLevelChange || (() => {})}
@@ -291,6 +291,7 @@ export const RedLightGreenLight = ({ onLevelChange, onNextLevel }: RedLightGreen
       />
       
       <Canvas
+        className="game-canvas"
         shadows
         camera={{ 
           position: FIELD_CONFIG.CAMERA_POSITION,

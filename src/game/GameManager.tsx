@@ -54,7 +54,7 @@ export const GameManager = () => {
   };
 
   return (
-    <div className="w-full h-screen">
+    <div className="game-viewport">
       {renderCurrentLevel()}
     </div>
   );

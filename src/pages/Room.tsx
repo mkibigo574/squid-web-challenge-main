@@ -64,50 +64,52 @@ const Room = () => {
   };
 
   return (
-    <div className="p-6 max-w-xl mx-auto space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Room {code}</h1>
-        <button onClick={handleBackToLobby} className="text-blue-600 underline">Back to Lobby</button>
-      </div>
-      <div className="text-sm text-gray-600">{status}</div>
-      
-      {isHost && (
-        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
-          <strong>You are the host!</strong> You can control the game.
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
+      <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 sm:p-6 max-w-xl w-full space-y-4 border border-white/20">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-white">Room {code}</h1>
+          <button onClick={handleBackToLobby} className="text-blue-300 underline hover:text-blue-200 text-sm sm:text-base">Back to Lobby</button>
         </div>
-      )}
+        <div className="text-xs sm:text-sm text-white/70">{status}</div>
+        
+        {isHost && (
+          <div className="bg-yellow-500/20 border border-yellow-400/50 text-yellow-200 px-3 py-2 rounded-lg">
+            <strong className="text-sm">You are the host!</strong> <span className="text-xs">You can control the game.</span>
+          </div>
+        )}
 
-      <div className="border rounded p-4">
-        <h2 className="font-semibold mb-2">Players</h2>
-        <ul className="space-y-1">
-          {players.map((p) => (
-            <li key={p.id} className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                {p.name || p.id}
-                {roomMetadata?.hostId === p.id && (
-                  <span className="text-xs bg-yellow-200 text-yellow-800 px-2 py-1 rounded">HOST</span>
-                )}
-              </span>
-              <span className="text-xs text-gray-500">
-                {p.isEliminated ? 'eliminated' : 'active'}
-                {typeof p.x === 'number' && typeof p.z === 'number' ? ` • x:${p.x.toFixed(2)} z:${p.z.toFixed(2)} ${p.isMoving ? '(moving)' : ''}` : ''}
-              </span>
-            </li>
-          ))}
-        </ul>
-        {players.length === 0 && <div className="text-sm text-gray-500">Waiting for players…</div>}
-      </div>
+        <div className="border border-white/20 rounded-lg p-3 sm:p-4 bg-white/5">
+          <h2 className="font-semibold mb-2 text-white text-sm sm:text-base">Players</h2>
+          <ul className="space-y-1">
+            {players.map((p) => (
+              <li key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2">
+                <span className="flex items-center gap-2">
+                  <span className="text-white text-sm">{p.name || p.id}</span>
+                  {roomMetadata?.hostId === p.id && (
+                    <span className="text-xs bg-yellow-500/30 text-yellow-200 px-2 py-0.5 rounded">HOST</span>
+                  )}
+                </span>
+                <span className="text-xs text-white/60">
+                  {p.isEliminated ? 'eliminated' : 'active'}
+                  {typeof p.x === 'number' && typeof p.z === 'number' ? ` • x:${p.x.toFixed(2)} z:${p.z.toFixed(2)} ${p.isMoving ? '(moving)' : ''}` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {players.length === 0 && <div className="text-xs sm:text-sm text-white/60">Waiting for players…</div>}
+        </div>
 
-      <div className="text-sm text-gray-500">
-        This page only verifies presence. We'll integrate game sync next.
-      </div>
-      <div className="space-y-2">
-        <button
-          onClick={handleEnterGame}
-          className="inline-block bg-purple-600 text-white rounded px-3 py-2"
-        >
-          Enter Game
-        </button>
+        <div className="text-xs sm:text-sm text-white/60">
+          This page only verifies presence. We'll integrate game sync next.
+        </div>
+        <div className="space-y-2">
+          <button
+            onClick={handleEnterGame}
+            className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-4 py-2 text-sm sm:text-base transition-all"
+          >
+            Enter Game
+          </button>
+        </div>
       </div>
     </div>
   );

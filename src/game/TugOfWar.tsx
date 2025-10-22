@@ -258,7 +258,7 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
   }, [gameState, pullRope, releaseRope]);
 
   return (
-    <div className="w-full h-screen relative bg-gray-900">
+    <div className="game-viewport relative bg-gray-900">
       {/* Level Progression */}
       <LevelProgression 
         onLevelChange={onLevelChange || (() => {})}
@@ -267,6 +267,7 @@ export const TugOfWar = ({ onLevelChange, onNextLevel }: TugOfWarProps = {}) => 
       />
       
       <Canvas
+        className="game-canvas"
         shadows
         camera={{ 
           position: [0, 6, 12],

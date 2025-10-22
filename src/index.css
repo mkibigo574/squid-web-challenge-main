@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Responsive Start Round Button Styles */
+/* Responsive Game Styles */
 @layer utilities {
   .start-round-button {
     /* Ensure button is always visible and accessible */
@@ -17,9 +17,9 @@
   /* Mobile-first responsive design */
   @media (max-width: 640px) {
     .start-round-button {
-      font-size: 1rem !important;
-      padding: 0.75rem 1.5rem !important;
-      min-width: 160px !important;
+      font-size: 0.875rem !important;
+      padding: 0.5rem 1rem !important;
+      min-width: 140px !important;
       max-width: 85vw !important;
     }
   }
@@ -27,27 +27,302 @@
   /* Tablet and up */
   @media (min-width: 641px) {
     .start-round-button {
-      font-size: 1.25rem !important;
-      padding: 1rem 2rem !important;
-      min-width: 200px !important;
+      font-size: 1.125rem !important;
+      padding: 0.75rem 1.5rem !important;
+      min-width: 180px !important;
     }
   }
   
   /* Desktop and up */
   @media (min-width: 1024px) {
     .start-round-button {
-      font-size: 1.5rem !important;
-      padding: 1.5rem 3rem !important;
-      min-width: 240px !important;
+      font-size: 1.25rem !important;
+      padding: 1rem 2rem !important;
+      min-width: 220px !important;
     }
   }
   
   /* Landscape orientation adjustments */
   @media (orientation: landscape) and (max-height: 600px) {
     .start-round-button {
-      font-size: 1rem !important;
-      padding: 0.5rem 1rem !important;
-      min-width: 140px !important;
+      font-size: 0.75rem !important;
+      padding: 0.375rem 0.75rem !important;
+      min-width: 120px !important;
+    }
+    
+    .game-ui-top {
+      @apply top-1 left-1 right-1 px-2;
+    }
+    
+    .game-ui-center {
+      @apply px-2;
+    }
+    
+    .game-ui-bottom {
+      @apply bottom-1 left-1 right-1 px-2;
+    }
+    
+    .game-ui-side {
+      @apply bottom-1 left-1 right-1 px-2;
+    }
+    
+    .game-title-mobile {
+      @apply text-2xl sm:text-3xl;
+    }
+    
+    .game-subtitle-mobile {
+      @apply text-sm sm:text-base;
+    }
+    
+    .game-button-mobile {
+      @apply text-xs sm:text-sm px-2 py-1;
+    }
+    
+    .game-status-mobile {
+      @apply text-xs;
+    }
+    
+    .game-timer-mobile {
+      @apply text-lg sm:text-xl;
+    }
+  }
+
+  /* Touch device optimizations */
+  @media (hover: none) and (pointer: coarse) {
+    .game-button-mobile {
+      @apply min-h-[44px] min-w-[44px];
+    }
+    
+    .game-ui-top {
+      @apply gap-2;
+    }
+    
+    .game-ui-center {
+      @apply px-4;
+    }
+  }
+
+  /* Game UI Responsive Styles */
+  .game-ui-container {
+    @apply absolute inset-0 pointer-events-none;
+  }
+
+  .game-ui-top {
+    @apply absolute top-2 left-2 right-2 flex justify-between items-center px-2 sm:px-4 md:px-8 pointer-events-auto;
+  }
+
+  .game-ui-center {
+    @apply absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-auto;
+  }
+
+  .game-ui-bottom {
+    @apply absolute bottom-2 left-2 right-2 pointer-events-auto;
+  }
+
+  .game-ui-side {
+    @apply absolute bottom-2 left-2 right-2 sm:bottom-4 sm:left-4 sm:right-4 pointer-events-auto;
+  }
+
+  /* Responsive text sizes */
+  .game-title-mobile {
+    @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl;
+  }
+
+  .game-subtitle-mobile {
+    @apply text-sm sm:text-base md:text-lg lg:text-xl;
+  }
+
+  .game-button-mobile {
+    @apply text-sm sm:text-base md:text-lg lg:text-xl px-3 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4;
+  }
+
+  .game-status-mobile {
+    @apply text-xs sm:text-sm md:text-base lg:text-lg;
+  }
+
+  .game-timer-mobile {
+    @apply text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl;
+  }
+
+  /* Responsive spacing */
+  .game-spacing-mobile {
+    @apply space-y-2 sm:space-y-3 md:space-y-4 lg:space-y-6;
+  }
+
+  .game-padding-mobile {
+    @apply p-2 sm:p-3 md:p-4 lg:p-6;
+  }
+
+  /* Canvas responsive sizing */
+  .game-canvas {
+    @apply w-full h-full;
+    min-height: 100vh;
+    min-width: 100vw;
+  }
+
+  /* Responsive viewport handling */
+  .game-viewport {
+    @apply w-full h-screen overflow-hidden;
+    min-height: 100vh;
+    min-width: 100vw;
+  }
+
+  /* Responsive container for game content */
+  .game-container {
+    @apply relative w-full h-full;
+  }
+
+  /* Responsive text scaling for very large screens */
+  @media (min-width: 1920px) {
+    .game-title-mobile {
+      @apply text-7xl;
+    }
+    
+    .game-subtitle-mobile {
+      @apply text-3xl;
+    }
+    
+    .game-button-mobile {
+      @apply text-2xl px-8 py-6;
+    }
+    
+    .game-status-mobile {
+      @apply text-xl;
+    }
+    
+    .game-timer-mobile {
+      @apply text-5xl;
+    }
+  }
+
+  /* Mobile-specific adjustments */
+  @media (max-width: 640px) {
+    .game-ui-top {
+      @apply flex-col space-y-2;
+    }
+    
+    .game-ui-center {
+      @apply px-4;
+    }
+    
+    .game-ui-bottom {
+      @apply px-2;
+    }
+  }
+
+  /* Tablet adjustments */
+  @media (min-width: 641px) and (max-width: 1023px) {
+    .game-ui-top {
+      @apply flex-row px-4;
+    }
+    
+    .game-ui-center {
+      @apply px-6;
+    }
+    
+    .game-ui-bottom {
+      @apply px-4;
+    }
+    
+    .game-ui-side {
+      @apply px-4;
+    }
+    
+    .game-title-mobile {
+      @apply text-4xl md:text-5xl;
+    }
+    
+    .game-subtitle-mobile {
+      @apply text-lg md:text-xl;
+    }
+    
+    .game-button-mobile {
+      @apply text-base md:text-lg px-5 py-3;
+    }
+    
+    .game-status-mobile {
+      @apply text-sm md:text-base;
+    }
+    
+    .game-timer-mobile {
+      @apply text-2xl md:text-3xl;
+    }
+  }
+
+  /* Desktop adjustments */
+  @media (min-width: 1024px) {
+    .game-ui-top {
+      @apply px-8;
+    }
+    
+    .game-ui-center {
+      @apply px-8;
+    }
+    
+    .game-ui-bottom {
+      @apply px-8;
+    }
+    
+    .game-ui-side {
+      @apply px-8;
+    }
+    
+    .game-title-mobile {
+      @apply text-5xl xl:text-6xl;
+    }
+    
+    .game-subtitle-mobile {
+      @apply text-xl xl:text-2xl;
+    }
+    
+    .game-button-mobile {
+      @apply text-lg xl:text-xl px-6 py-4;
+    }
+    
+    .game-status-mobile {
+      @apply text-base xl:text-lg;
+    }
+    
+    .game-timer-mobile {
+      @apply text-3xl xl:text-4xl;
+    }
+  }
+
+  /* Large desktop adjustments */
+  @media (min-width: 1280px) {
+    .game-ui-top {
+      @apply px-12;
+    }
+    
+    .game-ui-center {
+      @apply px-12;
+    }
+    
+    .game-ui-bottom {
+      @apply px-12;
+    }
+    
+    .game-ui-side {
+      @apply px-12;
+    }
+  }
+
+  /* Ultra-wide screen adjustments */
+  @media (min-width: 1536px) {
+    .game-ui-top {
+      @apply px-16;
+    }
+    
+    .game-ui-center {
+      @apply px-16;
+    }
+    
+    .game-ui-bottom {
+      @apply px-16;
+    }
+    
+    .game-ui-side {
+      @apply px-16;
     }
   }
 }
