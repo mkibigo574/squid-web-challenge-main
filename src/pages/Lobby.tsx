@@ -141,6 +141,7 @@ const Lobby = () => {
           <div>Classic: Red Light Green Light only</div>
           <div>Enhanced: Red Light Green Light + Tug of War V2</div>
         </div>
+      </div>
     </div>
   );
 };

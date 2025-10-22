@@ -989,55 +989,55 @@ export const MultiplayerTugOfWarV2 = () => {
 
       {/* Tournament Info Panel */}
       {tournamentMode && (
-        <div key={`tournament-info-${forceUpdate}`} className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-gradient-to-br from-white via-gray-50 to-white rounded-xl p-3 border-2 border-purple-300 shadow-2xl max-w-sm transform transition-all duration-300 hover:scale-105 z-50 backdrop-blur-sm">
+        <div key={`tournament-info-${forceUpdate}`} className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 md:bottom-6 md:right-6 lg:bottom-8 lg:right-8 bg-gradient-to-br from-white via-gray-50 to-white rounded-xl p-2 sm:p-3 border-2 border-purple-300 shadow-2xl max-w-xs sm:max-w-sm md:max-w-md transform transition-all duration-300 hover:scale-105 z-50 backdrop-blur-sm">
           {/* Animated background pattern */}
           <div className="absolute inset-0 bg-gradient-to-r from-purple-100 via-pink-100 to-purple-100 rounded-2xl opacity-30 animate-pulse"></div>
           
           <div className="relative z-10">
-            <div className="flex items-center justify-center mb-2">
-              <div className="text-xl mr-1 animate-spin">🏆</div>
-              <h3 className="font-black text-lg bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            <div className="flex items-center justify-center mb-1 sm:mb-2">
+              <div className="text-lg sm:text-xl mr-1 animate-spin">🏆</div>
+              <h3 className="font-black text-sm sm:text-base md:text-lg bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                 Tournament Progress
               </h3>
             </div>
             
-            <div className="bg-white/95 rounded-lg p-2 shadow-inner border border-gray-200">
-              <div className="text-center mb-2">
-                <div className="text-xl font-bold text-purple-700 mb-1">Round {currentRound}</div>
-                <div className="w-full bg-gray-200 rounded-full h-1.5 mb-1">
+            <div className="bg-white/95 rounded-lg p-1.5 sm:p-2 shadow-inner border border-gray-200">
+              <div className="text-center mb-1 sm:mb-2">
+                <div className="text-lg sm:text-xl font-bold text-purple-700 mb-1">Round {currentRound}</div>
+                <div className="w-full bg-gray-200 rounded-full h-1 sm:h-1.5 mb-1">
                   <div 
-                    className="bg-gradient-to-r from-purple-500 to-pink-500 h-1.5 rounded-full transition-all duration-500"
+                    className="bg-gradient-to-r from-purple-500 to-pink-500 h-1 sm:h-1.5 rounded-full transition-all duration-500"
                     style={{ width: `${Math.min((currentRound / 10) * 100, 100)}%` }}
                   ></div>
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-2 mb-2">
-                <div className="text-center bg-red-50 rounded p-2 border border-red-200">
-                  <div className="text-lg mb-1">🔴</div>
-                  <div className="font-bold text-red-700 text-sm">Red Team</div>
-                  <div className="text-sm font-black text-red-800">
+              <div className="grid grid-cols-2 gap-1 sm:gap-2 mb-1 sm:mb-2">
+                <div className="text-center bg-red-50 rounded p-1.5 sm:p-2 border border-red-200">
+                  <div className="text-sm sm:text-lg mb-0.5 sm:mb-1">🔴</div>
+                  <div className="font-bold text-red-700 text-xs sm:text-sm">Red Team</div>
+                  <div className="text-xs sm:text-sm font-black text-red-800">
                     {redTeamPlayers.filter(p => !p.isEliminated).length}/9
                   </div>
                 </div>
-                <div className="text-center bg-blue-50 rounded p-2 border border-blue-200">
-                  <div className="text-lg mb-1">🔵</div>
-                  <div className="font-bold text-blue-700 text-sm">Blue Team</div>
-                  <div className="text-sm font-black text-blue-800">
+                <div className="text-center bg-blue-50 rounded p-1.5 sm:p-2 border border-blue-200">
+                  <div className="text-sm sm:text-lg mb-0.5 sm:mb-1">🔵</div>
+                  <div className="font-bold text-blue-700 text-xs sm:text-sm">Blue Team</div>
+                  <div className="text-xs sm:text-sm font-black text-blue-800">
                     {blueTeamPlayers.filter(p => !p.isEliminated).length}/9
                   </div>
                 </div>
               </div>
               
             {selectedRedPlayers.length > 0 && (
-                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded p-2 border border-yellow-300">
-                  <div className="text-center font-bold text-yellow-800 text-xs mb-1">Round {currentRound} Players</div>
-                  <div className="grid grid-cols-2 gap-1 text-xs">
-                    <div className="bg-red-100 rounded p-1">
-                      <div className="font-semibold text-red-700">Red: {selectedRedPlayers.map(p => p.playerNumber).join(', ')}</div>
+                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded p-1.5 sm:p-2 border border-yellow-300">
+                  <div className="text-center font-bold text-yellow-800 text-xs mb-0.5 sm:mb-1">Round {currentRound} Players</div>
+                  <div className="grid grid-cols-2 gap-0.5 sm:gap-1 text-xs">
+                    <div className="bg-red-100 rounded p-0.5 sm:p-1">
+                      <div className="font-semibold text-red-700 text-xs">Red: {selectedRedPlayers.map(p => p.playerNumber).join(', ')}</div>
                 </div>
-                    <div className="bg-green-100 rounded p-1">
-                      <div className="font-semibold text-green-700">Blue: {selectedBluePlayers.map(p => p.playerNumber).join(', ')}</div>
+                    <div className="bg-green-100 rounded p-0.5 sm:p-1">
+                      <div className="font-semibold text-green-700 text-xs">Blue: {selectedBluePlayers.map(p => p.playerNumber).join(', ')}</div>
                     </div>
                 </div>
               </div>
@@ -1145,9 +1145,9 @@ export const MultiplayerTugOfWarV2 = () => {
 
       {/* Round Results Panel */}
       {phase === 'round-results' && roundResults.length > 0 && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-white via-gray-50 to-white rounded-3xl p-8 border-4 border-purple-300 shadow-2xl max-w-lg transform transition-all duration-500 animate-pulse">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-white via-gray-50 to-white rounded-3xl p-8 border-4 border-purple-300 shadow-2xl max-w-lg transform transition-all duration-500">
           {/* Animated background */}
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-100 via-pink-100 to-purple-100 rounded-3xl opacity-30 animate-pulse"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-100 via-pink-100 to-purple-100 rounded-3xl opacity-30"></div>
           
           <div className="relative z-10">
             <div className="text-center mb-6">
