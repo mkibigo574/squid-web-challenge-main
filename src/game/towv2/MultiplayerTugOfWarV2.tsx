@@ -1,8 +1,11 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as THREE from 'three';
 import { TugOfWarEnvironment } from '../components/TugOfWarEnvironment';
+import { useGLTF } from '@react-three/drei';
+import { MODEL_CONFIG } from '../config/models';
+import { SkeletonUtils } from 'three-stdlib';
 import { useTowV2 } from './useTowV2';
 import { CameraControlUI } from '../components/CameraControlUI';
 import { cinematicCameraManager } from '../utils/cinematicCamera';
@@ -71,11 +74,6 @@ function Rope({ value, phase = 'pulling' }: { value: number; phase?: string }) {
 
 function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as 'left'|'right', detached = false, floorY = BROWN_FLOOR_TOP_Y, playerIndex = 0, phase = 'pulling' }) {
   const group = useRef<THREE.Group>(null);
-  const leftHand = useRef<THREE.Mesh>(null);
-  const rightHand = useRef<THREE.Mesh>(null);
-  const headRef = useRef<THREE.Mesh>(null);
-  const footLRef = useRef<THREE.Mesh>(null);
-  const footRRef = useRef<THREE.Mesh>(null);
   const currentXRef = useRef<number>(x);
   const currentYRef = useRef<number>(PLAYER_BASE_Y);
   const vyRef = useRef<number>(0);
@@ -83,9 +81,39 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
   const isDisappearingRef = useRef<boolean>(false);
   const disappearStartTimeRef = useRef<number>(0);
   const bubblesRef = useRef<THREE.Group>(null);
+  const fallStartTimeRef = useRef<number>(0);
+  const eliminatedRef = useRef<boolean>(false);
+
+  // Timing controls
+  const MAX_FALL_TIME = 2.0; // seconds from detach to fully eliminated
+
+  // Load shared GLB player model (cached by URL)
+  const scene = ((useGLTF(MODEL_CONFIG.player.path) as any)?.scene as THREE.Group) || null;
+  // Clone per instance so multiple players can render independently
+  const clonedScene = React.useMemo(() => (scene ? SkeletonUtils.clone(scene) as THREE.Group : null), [scene]);
+
+  // Ensure consistent facing: default GLB likely faces +Z; rotate -90deg to face +X
+  useEffect(() => {
+    if (clonedScene) {
+      clonedScene.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+      // Face toward rope center: left team faces +X, right team faces -X
+      clonedScene.rotation.y = side === 'left' ? Math.PI / 2 : -Math.PI / 2;
+    }
+  }, [clonedScene]);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
+    // If already eliminated, keep hidden and do nothing
+    if (eliminatedRef.current) {
+      if (group.current) group.current.visible = false;
+      if (bubblesRef.current) bubblesRef.current.visible = false;
+      return;
+    }
     if (!detached) {
       // Follow rope-driven position/animation - optimized for performance
       currentXRef.current = x;
@@ -145,29 +173,33 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
         bubblesRef.current.clear(); // Clear any existing bubbles
         bubblesRef.current.visible = true; // Make sure bubbles are visible
       }
-      const jitter = Math.sin(t * 24 + x * 0.3) * 0.04 * effort;
-      if (leftHand.current) leftHand.current.position.x = -0.1 + jitter;
-      if (rightHand.current) rightHand.current.position.x = 0.1 - jitter;
+      // jitter effect omitted for GLB hands; lean/bob applied at group level
     } else {
       // Falling physics after detachment
       if (!hasDetachedRef.current) {
         hasDetachedRef.current = true;
-        vyRef.current = -0.02;
+        // Faster initial drop so players reach blades within 2 seconds
+        vyRef.current = -0.18;
         // Move to center gap area while maintaining relative positions
         const spacing = 0.8; // same spacing as when on rope
         const centerOffset = (playerIndex - 2.5) * spacing; // -2.5 to 2.5 range
         currentXRef.current = centerOffset;
+        fallStartTimeRef.current = t;
       }
       // Simple gravity
-      vyRef.current -= 0.012; // gravity accel
+      // Stronger gravity to guarantee reaching blades within allotted time
+      vyRef.current -= 0.04; // gravity accel
       currentYRef.current += vyRef.current;
       
       // Check if player hits the chainsaw level (Y = -5)
       const chainsawY = -5;
-      if (!isDisappearingRef.current && currentYRef.current <= chainsawY) {
+      const elapsedFall = t - fallStartTimeRef.current;
+      const shouldStartDisappear = (!isDisappearingRef.current) && (
+        currentYRef.current <= chainsawY || elapsedFall >= (MAX_FALL_TIME * 0.75)
+      );
+      if (shouldStartDisappear) {
         isDisappearingRef.current = true;
         disappearStartTimeRef.current = t;
-        
         // Create bubbles for magical effect
         if (bubblesRef.current) {
           bubblesRef.current.clear();
@@ -195,7 +227,10 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
       // Magical disappearing effect
       if (isDisappearingRef.current) {
         const disappearTime = t - disappearStartTimeRef.current;
-        const disappearDuration = 1.0; // 1 second disappearing effect
+        // Keep total time under MAX_FALL_TIME
+        const elapsedFall = Math.max(0, t - fallStartTimeRef.current);
+        const remaining = Math.max(0.1, MAX_FALL_TIME - elapsedFall);
+        const disappearDuration = Math.min(0.6, remaining);
         
         if (disappearTime < disappearDuration) {
           // Fade out and scale down with magical effect
@@ -253,12 +288,10 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
           }
         } else {
           // Completely hide the player and bubbles
-          if (group.current) {
-            group.current.visible = false;
-          }
-          if (bubblesRef.current) {
-            bubblesRef.current.visible = false;
-          }
+          if (group.current) group.current.visible = false;
+          if (bubblesRef.current) bubblesRef.current.visible = false;
+          eliminatedRef.current = true;
+          return;
         }
       } else {
         // Clamp to floor if not disappearing
@@ -274,18 +307,7 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
             group.current.rotation.z = 0;
           }
     }
-    // Head tilt based on effort
-    if (headRef.current) {
-      const headEff = detached ? 0 : effort;
-      headRef.current.rotation.x = -0.2 * headEff;
-      headRef.current.rotation.y = (side === 'left' ? 1 : -1) * 0.15 * headEff;
-    }
-    // Foot sliding backwards relative to pull direction
-    const activeEffort = detached ? 0 : effort;
-    const slide = 0.1 * activeEffort + Math.sin(t * 6 + z) * 0.03 * activeEffort;
-    const dir = side === 'left' ? 1 : -1; // slide feet backward
-    if (footLRef.current) footLRef.current.position.x = -0.18 + dir * slide;
-    if (footRRef.current) footRRef.current.position.x = 0.18 + dir * slide;
+    // Simple extra rocking based on effort can be applied to group rotation if desired
 
     // Apply computed position
     if (group.current) {
@@ -294,36 +316,40 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
     }
   });
 
+  // Hard-reset position/orientation to original slot whenever we are not actively pulling/falling
+  useEffect(() => {
+    const isActive = phase === 'pulling' || phase === 'falling';
+    if (!isActive && group.current) {
+      // Recompute baseline Y to keep hands aligned at pre-game height
+      let ropeY = PLAYER_BASE_Y + HAND_LOCAL_Y;
+      if (phase === 'floating' || phase === 'positioning') {
+        ropeY += FLOATING_OFFSET;
+      }
+      const baseY = ropeY - HAND_LOCAL_Y;
+      currentXRef.current = x;
+      currentYRef.current = baseY;
+      vyRef.current = 0;
+      hasDetachedRef.current = false;
+      isDisappearingRef.current = false;
+      eliminatedRef.current = false;
+      group.current.visible = true;
+      group.current.scale.setScalar(1);
+      group.current.rotation.set(0, 0, 0);
+      group.current.position.set(x, baseY, z);
+    }
+  }, [phase, x, z]);
+
   return (
     <group ref={group} position={[x, 0, z]} rotation={[0, rotationY, 0]}>
-      {/* body */}
-      <mesh position={[0, 0.9, 0]} castShadow>
-        <capsuleGeometry args={[0.35, 0.8, 4, 10]} />
-        <meshStandardMaterial color={color} />
-      </mesh>
-      {/* head */}
-      <mesh ref={headRef} position={[0, 1.8, 0]} castShadow>
-        <sphereGeometry args={[0.32, 16, 16]} />
-        <meshStandardMaterial color="#222" />
-      </mesh>
-      {/* hands gripping rope (around rope along x axis) */}
-      <mesh ref={rightHand} position={[0.1, 1.2, 0]}>
-        <sphereGeometry args={[0.15, 12, 12]} />
-        <meshStandardMaterial color="#ff6b6b" />
-      </mesh>
-      <mesh ref={leftHand} position={[-0.1, 1.2, 0]}>
-        <sphereGeometry args={[0.15, 12, 12]} />
-        <meshStandardMaterial color="#ff6b6b" />
-      </mesh>
-      {/* simple feet */}
-      <mesh ref={footRRef} position={[0.18, 0.2, 0.08]}>
-        <boxGeometry args={[0.18, 0.12, 0.28]} />
-        <meshStandardMaterial color="#111" />
-      </mesh>
-      <mesh ref={footLRef} position={[-0.18, 0.2, 0.08]}>
-        <boxGeometry args={[0.18, 0.12, 0.28]} />
-        <meshStandardMaterial color="#111" />
-      </mesh>
+      {clonedScene ? (
+        <primitive object={clonedScene} />
+      ) : (
+        // Minimal fallback if GLB fails
+        <mesh position={[0, 0.9, 0]} castShadow>
+          <capsuleGeometry args={[0.35, 0.8, 4, 10]} />
+          <meshStandardMaterial color={color} />
+        </mesh>
+      )}
       {/* Magical bubbles for disappearing effect */}
       <group ref={bubblesRef} />
     </group>
@@ -333,6 +359,8 @@ function SimplePlayer({ x, z, color, rotationY = 0, effort = 0, side = 'left' as
 function TeamPlayers({ rope, redEffort, blueEffort, detachedRed, detachedBlue, phase }: { rope: number; redEffort: number; blueEffort: number; detachedRed: boolean; detachedBlue: boolean; phase: string }) {
   // Rope runs along X at z=0; distribute players ALONG the rope near each side
   const ropeCenterX = rope * 10;
+  // Keep players at original pre-game positions during lobby/positioning/floating/results
+  const stableCenterX = (phase === 'pulling' || phase === 'falling') ? ropeCenterX : 0;
   const shift = 9.0; // increased by 1 unit total (0.5 per side)
   const leftOffsets = [-3.8 - shift, -3.0 - shift, -2.2 - shift];
   const rightOffsets = [3.8 + shift, 3.0 + shift, 2.2 + shift];
@@ -342,10 +370,10 @@ function TeamPlayers({ rope, redEffort, blueEffort, detachedRed, detachedBlue, p
   return (
     <group>
       {leftOffsets.map((ox, i) => (
-        <SimplePlayer key={`L${i}`} x={ropeCenterX + ox} z={z} color="#dc2626" rotationY={0} effort={redEffort} side="left" detached={detachedRed} floorY={BROWN_FLOOR_TOP_Y} playerIndex={i} phase={phase} />
+        <SimplePlayer key={`L${i}`} x={stableCenterX + ox} z={z} color="#dc2626" rotationY={0} effort={redEffort} side="left" detached={detachedRed} floorY={BROWN_FLOOR_TOP_Y} playerIndex={i} phase={phase} />
       ))}
       {rightOffsets.map((ox, i) => (
-        <SimplePlayer key={`R${i}`} x={ropeCenterX + ox} z={z} color="#16a34a" rotationY={Math.PI} effort={blueEffort} side="right" detached={detachedBlue} floorY={BROWN_FLOOR_TOP_Y} playerIndex={i + 3} phase={phase} />
+        <SimplePlayer key={`R${i}`} x={stableCenterX + ox} z={z} color="#16a34a" rotationY={0} effort={blueEffort} side="right" detached={detachedBlue} floorY={BROWN_FLOOR_TOP_Y} playerIndex={i + 3} phase={phase} />
       ))}
     </group>
   );

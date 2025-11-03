@@ -394,8 +394,8 @@ export function useTowV2() {
       
       let delta;
       if (isAnyTeamPulling) {
-        // Normal pulling physics when teams are active - increased sensitivity for individual pulls
-        delta = (bluePower - redPower) * 0.25; // Increased from 0.15 to 0.25
+        // Normal pulling physics when teams are active - reduced sensitivity
+        delta = (bluePower - redPower) * 0.10;
       } else {
         // Loose rope physics when no team is pulling - rope slowly returns to center
         const centerForce = -rope * 0.05; // Gentle pull toward center
