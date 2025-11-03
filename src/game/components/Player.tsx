@@ -154,16 +154,9 @@ const EliminationEffect = () => {
 
 // GLB Player component (no state updates during render/Suspense)
 const GLBPlayer = ({ modelPath, state }: { modelPath: string; state: string }) => {
-  let scene, animations;
-  try {
-    const gltf = useGLTF(modelPath);
-    scene = gltf.scene;
-    animations = gltf.animations;
-  } catch (error) {
-    console.warn('Failed to load player model, using fallback:', error);
-    scene = null;
-    animations = [];
-  }
+  const gltf = useGLTF(modelPath);
+  const scene = gltf.scene as THREE.Group | null;
+  const animations = gltf.animations as THREE.AnimationClip[];
   
   const mixerRef = useRef<THREE.AnimationMixer>();
   const actionRef = useRef<THREE.AnimationAction | null>(null);
