@@ -71,16 +71,9 @@ const PlayerLoading = () => (
 
 // GLB Player component (reused from Player.tsx)
 const GLBPlayer = ({ modelPath, state }: { modelPath: string; state: string }) => {
-  let scene, animations;
-  try {
-    const gltf = useGLTF(modelPath);
-    scene = gltf.scene;
-    animations = gltf.animations;
-  } catch (error) {
-    console.warn('Failed to load player model, using fallback:', error);
-    scene = null;
-    animations = [];
-  }
+  const gltf = useGLTF(modelPath);
+  const scene = gltf.scene as THREE.Group | null;
+  const animations = gltf.animations as THREE.AnimationClip[];
   
   const mixerRef = useRef<THREE.AnimationMixer>();
   const actionRef = useRef<THREE.AnimationAction | null>(null);
@@ -310,7 +303,7 @@ export const TugOfWarPlayer = ({
   }, [mixer, model, gameState, isPulling]);
 
   const [usePrimitive, setUsePrimitive] = useState(false);
-  const [assetChecked, setAssetChecked] = useState(false);
+  const [assetChecked] = useState(true);
 
   // Determine animation state based on game state and pulling
   const getAnimationState = (): string => {
@@ -332,58 +325,8 @@ export const TugOfWarPlayer = ({
     console.log('TugOfWarPlayer assetChecked:', assetChecked);
   }, [modelPath, usePrimitive, assetChecked]);
 
-  // Proactively verify model asset availability to avoid canvas crash
-  useEffect(() => {
-    let cancelled = false;
-    if (!modelPath) {
-      setUsePrimitive(true);
-      setAssetChecked(true);
-      return;
-    }
-    
-    // Check if this is a local path (starts with /) or a full URL
-    const isLocalPath = modelPath.startsWith('/');
-    
-    if (isLocalPath) {
-      // For local paths, check if the file exists
-      fetch(modelPath, { method: 'HEAD' })
-        .then((res) => {
-          if (cancelled) return;
-          if (!res.ok) {
-            console.warn(`Local model not found: ${modelPath}, using primitive fallback`);
-            setUsePrimitive(true);
-          }
-          setAssetChecked(true);
-        })
-        .catch(() => {
-          if (cancelled) return;
-          console.warn(`Failed to load local model: ${modelPath}, using primitive fallback`);
-          setUsePrimitive(true);
-          setAssetChecked(true);
-        });
-    } else {
-      // For Supabase URLs, try to load and fallback to local if needed
-      fetch(modelPath, { method: 'HEAD' })
-        .then((res) => {
-          if (cancelled) return;
-          if (!res.ok) {
-            console.warn(`Supabase model not available: ${modelPath}, using primitive fallback`);
-            setUsePrimitive(true);
-          }
-          setAssetChecked(true);
-        })
-        .catch(() => {
-          if (cancelled) return;
-          console.warn(`Failed to load Supabase model: ${modelPath}, using primitive fallback`);
-          setUsePrimitive(true);
-          setAssetChecked(true);
-        });
-    }
-    
-    return () => {
-      cancelled = true;
-    };
-  }, [modelPath]);
+  // Trust Suspense/useGLTF for loading; only fallback if modelPath missing
+  // (HEAD checks can incorrectly force fallback on some CDNs)
 
   // If model path is missing, use primitive fallback
   useEffect(() => {
