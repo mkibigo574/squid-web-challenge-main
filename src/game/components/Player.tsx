@@ -310,7 +310,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(({
   const [usePrimitive, setUsePrimitive] = useState(!modelPath);
   
   const [isMoving, setIsMoving] = useState(false);
-  const [assetChecked, setAssetChecked] = useState(false);
+  const [assetChecked, setAssetChecked] = useState(true);
 
   // Reset internal state when resetKey changes
   useEffect(() => {
@@ -356,28 +356,9 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(({
     return () => multiplayerManager.offEvent('GAME_RESET', onGameReset);
   }, [playerGroupRef]);
 
-  // Proactively verify model asset availability to avoid canvas crash
+  // Trust Suspense/useGLTF to handle loading; fallback handled in render
   useEffect(() => {
-    let cancelled = false;
-    if (!modelPath) {
-      setUsePrimitive(true);
-      setAssetChecked(true);
-      return;
-    }
-    fetch(modelPath, { method: 'HEAD' })
-      .then((res) => {
-        if (cancelled) return;
-        if (!res.ok) setUsePrimitive(true);
-        setAssetChecked(true);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setUsePrimitive(true);
-        setAssetChecked(true);
-      });
-    return () => {
-      cancelled = true;
-    };
+    if (!modelPath) setUsePrimitive(true);
   }, [modelPath]);
 
   // If model path is missing, use primitive fallback

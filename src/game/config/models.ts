@@ -28,8 +28,8 @@ const createModelConfig = (supabasePath: string, localPath: string, config: any)
 
 export const MODEL_CONFIG = {
   player: createModelConfig(
-    "Meshy_Merged_Animations (Walk, Run, Fall & Happy).glb",
-    "/models/Meshy_Merged_Animations (Walk, Run, Fall & Happy).glb",
+    "player.glb",
+    "/models/player.glb",
     {
       scale: 1.0,
       position: [0, 0, 0],
@@ -39,8 +39,8 @@ export const MODEL_CONFIG = {
     }
   ),
   doll: createModelConfig(
-    "Doly_3D__texture.glb",
-    "/models/Doly_3D__texture.glb",
+    "doll.glb",
+    "/models/doll.glb",
     {
       scale: 1.0,
       position: [0, 0, 25],
